@@ -8,7 +8,6 @@ const char* wifi_password = "Your password";
 const char* mqtt_server = "Brocker IP";
 const char* mqtt_topic = "esp";
 const char* clientID = "NodeMCU Modul 1";
-const int delay_in_sec = 1200;
 const int DHTPin = D4;
 const int ButtonPin = D3;
 const int inLED = D0;
@@ -140,5 +139,5 @@ void loop() {
     Serial.println("Message sent!");
     }
   digitalWrite(inLED,HIGH);
-  delay(delay_in_sec*1000);
+  delay(10000);
 }
