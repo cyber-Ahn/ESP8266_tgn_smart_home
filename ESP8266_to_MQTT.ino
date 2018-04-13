@@ -1,15 +1,19 @@
+#include <Wire.h>
+#include "SSD1306Wire.h"
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
+
 #include "DHT.h"
 #define DHTTYPE DHT22
+#define lightsensor A0
 
-const char* ssid = "Your SSID";
-const char* wifi_password = "Your password";
-const char* mqtt_server = "Brocker IP";
+const char* ssid = "Matrix";
+const char* wifi_password = "rhjk0096#Matrix";
+const char* mqtt_server = "192.168.0.98";
 const char* mqtt_topic = "esp";
 const char* clientID = "NodeMCU Modul 1";
 const int DHTPin = D4;
-const int ButtonPin = D3;
+const int ButtonPin = D2;
 const int inLED = D0;
 char* b1 = "off";
 static char celsiusTemp[7];
@@ -20,8 +24,14 @@ int switchState = 0;
 WiFiClient wifiClient;
 PubSubClient client(mqtt_server, 1883, wifiClient);
 DHT dht2(DHTPin, DHTTYPE);
+SSD1306Wire  display(0x3c, D3, D5);
+
 
 void setup() {
+  display.init();
+
+  display.flipScreenVertically();
+  display.setFont(ArialMT_Plain_10);
   pinMode(inLED, OUTPUT);
   pinMode(ButtonPin, INPUT);
   Serial.begin(9600);
@@ -53,6 +63,7 @@ void loop() {
   float h = dht2.readHumidity();
   float t = dht2.readTemperature();
   float f = dht2.readTemperature(true);
+  int val = analogRead(lightsensor);
   if (switchState == HIGH){
     b1 = "on";
     }
@@ -112,11 +123,13 @@ void loop() {
   static char ip_c[7];
   static char ip_d[7];
   static char rssi_x[7];
+  static char lis[7];
   dtostrf(first_octet, 2, 0, ip_a);
   dtostrf(second_octet, 2, 0, ip_b);
   dtostrf(third_octet, 1, 0, ip_c);
   dtostrf(fourth_octet, 2, 0, ip_d);
   dtostrf(rssi_r, 2, 0, rssi_x);
+  dtostrf(val, 2, 0, lis);
   strcat(out,ip_a);
   strcat(out,".");
   strcat(out,ip_b);
@@ -134,7 +147,25 @@ void loop() {
   strcat(out,prc_out);
   strcat(out,"$");
   strcat(out,rssi_x);
+  strcat(out,"|ligh:");
+  strcat(out,lis);
   Serial.println(out);
+
+  display.clear();
+  display.setTextAlignment(TEXT_ALIGN_LEFT);
+  display.setFont(ArialMT_Plain_10);
+  display.drawString(0, 0, "WIFI:      %");
+  display.drawString(30, 0, prc_out);
+  display.drawString(0, 12, "TEMP:          °C");
+  display.drawString(30, 12, celsiusTemp);
+  display.drawString(0, 24, "HUMI:           %");
+  display.drawString(30, 24, humidityTemp);
+  display.drawString(0, 36, "B1:");
+  display.drawString(30, 36, b1);
+  display.drawString(0, 48, "LIGH:");
+  display.drawString(30, 48, lis);
+  display.display();
+  
   if (client.publish(mqtt_topic, out)) {
     Serial.println("Message sent!");
     }
