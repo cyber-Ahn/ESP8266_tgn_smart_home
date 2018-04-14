@@ -7,9 +7,9 @@
 #define DHTTYPE DHT22
 #define lightsensor A0
 
-const char* ssid = "Matrix";
-const char* wifi_password = "rhjk0096#Matrix";
-const char* mqtt_server = "192.168.0.98";
+const char* ssid = "YOUR SSID";
+const char* wifi_password = "YOUR PASSWORD";
+const char* mqtt_server = "SERVER IP";
 const char* mqtt_topic = "esp";
 const char* clientID = "NodeMCU Modul 1";
 const int DHTPin = D4;
@@ -26,10 +26,8 @@ PubSubClient client(mqtt_server, 1883, wifiClient);
 DHT dht2(DHTPin, DHTTYPE);
 SSD1306Wire  display(0x3c, D3, D5);
 
-
 void setup() {
   display.init();
-
   display.flipScreenVertically();
   display.setFont(ArialMT_Plain_10);
   pinMode(inLED, OUTPUT);
@@ -49,15 +47,22 @@ void setup() {
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
   Serial.println(WiFi.macAddress());
+}
+
+void reconnect(){
   if (client.connect(clientID)) {
     Serial.println("Connected to MQTT Broker!");
   }
   else {
     Serial.println("Connection to MQTT Broker failed...");
+    delay(5000);
   }
 }
 
 void loop() {
+  if (!client.connected()) {
+    reconnect();
+  }
   switchState = digitalRead(ButtonPin);
   digitalWrite(inLED,LOW);
   float h = dht2.readHumidity();
@@ -71,10 +76,10 @@ void loop() {
     b1 = "off";
     }
   float hic = dht2.computeHeatIndex(t, h, false);
-  dtostrf(hic, 6, 2, celsiusTemp);
+  dtostrf(hic, 4, 1, celsiusTemp);
   float hif = dht2.computeHeatIndex(f, h);
-  dtostrf(hif, 6, 2, fahrenheitTemp);
-  dtostrf(h, 6, 2, humidityTemp);
+  dtostrf(hif, 6, 1, fahrenheitTemp);
+  dtostrf(h, 4, 1, humidityTemp);
   long rssi = WiFi.RSSI();
   long ch = 0 - rssi;
   char* prc_out = "0";
@@ -130,45 +135,43 @@ void loop() {
   dtostrf(fourth_octet, 2, 0, ip_d);
   dtostrf(rssi_r, 2, 0, rssi_x);
   dtostrf(val, 2, 0, lis);
-  strcat(out,ip_a);
-  strcat(out,".");
-  strcat(out,ip_b);
-  strcat(out,".");
-  strcat(out,ip_c);
-  strcat(out,".");
+  //strcat(out,ip_a);
+  //strcat(out,".");
+  //strcat(out,ip_b);
+  //strcat(out,".");
+  //strcat(out,ip_c);
+  //strcat(out,".");
   strcat(out,ip_d);
-  strcat(out,"Data|temp:");
+  strcat(out,"|t:");
   strcat(out,celsiusTemp);
-  strcat(out,"|humi:");
+  strcat(out,"|h:");
   strcat(out,humidityTemp);
   strcat(out,"|b1:");
   strcat(out,b1);
-  strcat(out,"|rssi:");
+  strcat(out,"|r:");
   strcat(out,prc_out);
   strcat(out,"$");
   strcat(out,rssi_x);
-  strcat(out,"|ligh:");
+  strcat(out,"|l:");
   strcat(out,lis);
   Serial.println(out);
-
   display.clear();
   display.setTextAlignment(TEXT_ALIGN_LEFT);
   display.setFont(ArialMT_Plain_10);
   display.drawString(0, 0, "WIFI:      %");
-  display.drawString(30, 0, prc_out);
+  display.drawString(31, 0, prc_out);
   display.drawString(0, 12, "TEMP:          °C");
-  display.drawString(30, 12, celsiusTemp);
+  display.drawString(31, 12, celsiusTemp);
   display.drawString(0, 24, "HUMI:           %");
-  display.drawString(30, 24, humidityTemp);
+  display.drawString(31, 24, humidityTemp);
   display.drawString(0, 36, "B1:");
-  display.drawString(30, 36, b1);
+  display.drawString(31, 36, b1);
   display.drawString(0, 48, "LIGH:");
-  display.drawString(30, 48, lis);
+  display.drawString(31, 48, lis);
   display.display();
-  
   if (client.publish(mqtt_topic, out)) {
     Serial.println("Message sent!");
     }
   digitalWrite(inLED,HIGH);
-  delay(10000);
+  delay(30000);
 }
