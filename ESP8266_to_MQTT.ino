@@ -8,9 +8,9 @@
 #define DHTTYPE DHT22
 #define lightsensor A0
 
-const char* ssid = "Matrix";
-const char* wifi_password = "rhjk0096#Matrix";
-const char* mqtt_server = "192.168.0.98";
+const char* ssid = "Your SSID";
+const char* wifi_password = "Your WIFI password";
+const char* mqtt_server = "Broker IP";
 const char* temp_topic = "esp_1/temp/sensor_1";
 const char* hum_topic = "esp_1/temp/sensor_2";
 const char* b1_topic = "esp_1/button/b1";
@@ -19,8 +19,8 @@ const char* wifi2_topic = "esp_1/wifi/rssi";
 const char* light_topic = "esp_1/analog/sensor_1";
 const char* con_topic = "esp_1/connection/ip";
 const char* clientID = "NodeMCU Modul 1";
-unsigned long myChannelNumber = 469382;
-const char * myWriteAPIKey = "Q24CHI315VCNGER1";
+unsigned long myChannelNumber = 123456; // your channel number
+const char * myWriteAPIKey = "Your API Write Key";
 const int DHTPin = D4;
 const int ButtonPin = D2;
 const int inLED = D0;
