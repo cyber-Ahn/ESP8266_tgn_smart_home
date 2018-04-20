@@ -2,16 +2,25 @@
 #include "SSD1306Wire.h"
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
+#include <ThingSpeak.h>
 
 #include "DHT.h"
 #define DHTTYPE DHT22
 #define lightsensor A0
 
-const char* ssid = "YOUR SSID";
-const char* wifi_password = "YOUR PASSWORD";
-const char* mqtt_server = "SERVER IP";
-const char* mqtt_topic = "esp";
+const char* ssid = "Matrix";
+const char* wifi_password = "rhjk0096#Matrix";
+const char* mqtt_server = "192.168.0.98";
+const char* temp_topic = "esp_1/temp/sensor_1";
+const char* hum_topic = "esp_1/temp/sensor_2";
+const char* b1_topic = "esp_1/button/b1";
+const char* wifi1_topic = "esp_1/wifi/pre";
+const char* wifi2_topic = "esp_1/wifi/rssi";
+const char* light_topic = "esp_1/analog/sensor_1";
+const char* con_topic = "esp_1/connection/ip";
 const char* clientID = "NodeMCU Modul 1";
+unsigned long myChannelNumber = 469382;
+const char * myWriteAPIKey = "Q24CHI315VCNGER1";
 const int DHTPin = D4;
 const int ButtonPin = D2;
 const int inLED = D0;
@@ -20,6 +29,7 @@ static char celsiusTemp[7];
 static char fahrenheitTemp[7];
 static char humidityTemp[7];
 int switchState = 0;
+int time_ts = 0;
 
 WiFiClient wifiClient;
 PubSubClient client(mqtt_server, 1883, wifiClient);
@@ -47,6 +57,7 @@ void setup() {
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
   Serial.println(WiFi.macAddress());
+  ThingSpeak.begin(wifiClient);
 }
 
 void reconnect(){
@@ -72,7 +83,7 @@ void loop() {
   if (switchState == HIGH){
     b1 = "on";
     }
-   else {
+  else {
     b1 = "off";
     }
   float hic = dht2.computeHeatIndex(t, h, false);
@@ -116,7 +127,7 @@ void loop() {
   if (ch <= 35 and ch > 0) {
     prc_out = "100";
     }
-  char out[50] = "IP:";
+  char ip_out[50] = "";
   IPAddress ip_r = WiFi.localIP();
   int  rssi_r = WiFi.RSSI();
   byte first_octet = ip_r[0];
@@ -135,26 +146,13 @@ void loop() {
   dtostrf(fourth_octet, 2, 0, ip_d);
   dtostrf(rssi_r, 2, 0, rssi_x);
   dtostrf(val, 2, 0, lis);
-  //strcat(out,ip_a);
-  //strcat(out,".");
-  //strcat(out,ip_b);
-  //strcat(out,".");
-  //strcat(out,ip_c);
-  //strcat(out,".");
-  strcat(out,ip_d);
-  strcat(out,"|t:");
-  strcat(out,celsiusTemp);
-  strcat(out,"|h:");
-  strcat(out,humidityTemp);
-  strcat(out,"|b1:");
-  strcat(out,b1);
-  strcat(out,"|r:");
-  strcat(out,prc_out);
-  strcat(out,"$");
-  strcat(out,rssi_x);
-  strcat(out,"|l:");
-  strcat(out,lis);
-  Serial.println(out);
+  strcat(ip_out,ip_a);
+  strcat(ip_out,".");
+  strcat(ip_out,ip_b);
+  strcat(ip_out,".");
+  strcat(ip_out,ip_c);
+  strcat(ip_out,".");
+  strcat(ip_out,ip_d);
   display.clear();
   display.setTextAlignment(TEXT_ALIGN_LEFT);
   display.setFont(ArialMT_Plain_10);
@@ -169,9 +167,35 @@ void loop() {
   display.drawString(0, 48, "LIGH:");
   display.drawString(31, 48, lis);
   display.display();
-  if (client.publish(mqtt_topic, out)) {
-    Serial.println("Message sent!");
+  if (client.publish(temp_topic, celsiusTemp)) {
+    Serial.println(celsiusTemp);
     }
+  if (client.publish(hum_topic, humidityTemp)) {
+    Serial.println(humidityTemp);
+    }
+  if (client.publish(b1_topic, b1)) {
+    Serial.println(b1);
+    }
+  if (client.publish(wifi1_topic, prc_out)) {
+    Serial.println(prc_out);
+    }
+  if (client.publish(wifi2_topic, rssi_x)) {
+    Serial.println(rssi_x);
+    }
+  if (client.publish(light_topic, lis)) {
+    Serial.println(lis);
+    }
+  if (client.publish(con_topic, ip_out)) {
+    Serial.println(ip_out);
+    }
+  if (time_ts == 0 or time_ts ==3600) {
+    ThingSpeak.setField(1,celsiusTemp);
+    ThingSpeak.setField(2,humidityTemp);
+    ThingSpeak.setField(3,lis);
+    ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
+    time_ts = 0;
+    }
+  time_ts = time_ts + 30;
   digitalWrite(inLED,HIGH);
   delay(30000);
 }
