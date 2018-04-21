@@ -8,9 +8,9 @@
 #define DHTTYPE DHT22
 #define lightsensor A0
 
-const char* ssid = "Your SSID";
-const char* wifi_password = "Your WIFI password";
-const char* mqtt_server = "Broker IP";
+const char* ssid = "Matrix";
+const char* wifi_password = "rhjk0096#Matrix";
+const char* mqtt_server = "192.168.0.98";
 const char* temp_topic = "esp_1/temp/sensor_1";
 const char* hum_topic = "esp_1/temp/sensor_2";
 const char* b1_topic = "esp_1/button/b1";
@@ -19,8 +19,8 @@ const char* wifi2_topic = "esp_1/wifi/rssi";
 const char* light_topic = "esp_1/analog/sensor_1";
 const char* con_topic = "esp_1/connection/ip";
 const char* clientID = "NodeMCU Modul 1";
-unsigned long myChannelNumber = 123456; // your channel number
-const char * myWriteAPIKey = "Your API Write Key";
+unsigned long myChannelNumber = 469382;
+const char * myWriteAPIKey = "Q24CHI315VCNGER1";
 const int DHTPin = D4;
 const int ButtonPin = D2;
 const int inLED = D0;
@@ -167,25 +167,25 @@ void loop() {
   display.drawString(0, 48, "LIGH:");
   display.drawString(31, 48, lis);
   display.display();
-  if (client.publish(temp_topic, celsiusTemp)) {
+  if (client.publish(temp_topic, (uint8_t*)celsiusTemp, strlen(celsiusTemp), true)) {
     Serial.println(celsiusTemp);
     }
-  if (client.publish(hum_topic, humidityTemp)) {
+  if (client.publish(hum_topic, (uint8_t*)humidityTemp, strlen(humidityTemp), true)) {
     Serial.println(humidityTemp);
     }
-  if (client.publish(b1_topic, b1)) {
+  if (client.publish(b1_topic, (uint8_t*)b1, strlen(b1), true)) {
     Serial.println(b1);
     }
-  if (client.publish(wifi1_topic, prc_out)) {
+  if (client.publish(wifi1_topic, (uint8_t*)prc_out, strlen(prc_out), true)) {
     Serial.println(prc_out);
     }
-  if (client.publish(wifi2_topic, rssi_x)) {
+  if (client.publish(wifi2_topic, (uint8_t*)rssi_x, strlen(rssi_x), true)) {
     Serial.println(rssi_x);
     }
-  if (client.publish(light_topic, lis)) {
+  if (client.publish(light_topic, (uint8_t*)lis, strlen(lis), true)) {
     Serial.println(lis);
     }
-  if (client.publish(con_topic, ip_out)) {
+  if (client.publish(con_topic, (uint8_t*)ip_out, strlen(ip_out), true)) {
     Serial.println(ip_out);
     }
   if (time_ts == 0 or time_ts ==3600) {
@@ -197,5 +197,6 @@ void loop() {
     }
   time_ts = time_ts + 30;
   digitalWrite(inLED,HIGH);
+  Serial.println("---------------------------------------------------------");
   delay(30000);
 }
