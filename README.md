@@ -1,5 +1,6 @@
 # ESP8266_tgn_smart_home
-Read DHT22, publish data to MQTT-Brocker and sends data to Thingspeak
+Read DHT22,light sensor(analog), publish data to MQTT-Brocker and sends data to Thingspeak
+(optional OELD-Display)
 
 needed Libs:
 + Adafruit_Sensor-master https://github.com/adafruit/Adafruit_Sensor
