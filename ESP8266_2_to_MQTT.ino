@@ -1,12 +1,17 @@
+
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 
+#include "DHT.h"
+#define DHTTYPE DHT22
 #define lightsensor A0
 
 const char* ssid = "Matrix";
 const char* wifi_password = "rhjk0096#Matrix";
 const char* mqtt_server = "192.168.0.98";
 
+const char* temp_topic = "tgn/esp_2/temp/sensor_1";
+const char* hum_topic = "tgn/esp_2/temp/sensor_2";
 const char* b1_topic = "tgn/esp_2/button/b1";
 const char* wifi1_topic = "tgn/esp_2/wifi/pre";
 const char* wifi2_topic = "tgn/esp_2/wifi/rssi";
@@ -14,19 +19,25 @@ const char* light_topic = "tgn/esp_2/analog/sensor_1";
 const char* con_topic = "tgn/esp_2/connection/ip";
 const char* clientID = "NodeMCU Modul 2";
 
-const int ButtonPin = D2;
+const int DHTPin = D4;
+const int ButtonPin = D7;
 const int inLED = D0;
 char* b1 = "off";
+static char celsiusTemp[7];
+static char fahrenheitTemp[7];
+static char humidityTemp[7];
 int switchState = 0;
 
 WiFiClient wifiClient;
 PubSubClient client(mqtt_server, 1883, wifiClient);
+DHT dht2(DHTPin, DHTTYPE);
 
 void setup() {
   pinMode(inLED, OUTPUT);
   pinMode(ButtonPin, INPUT);
   Serial.begin(9600);
   delay(10);
+  dht2.begin();
   Serial.println();
   Serial.print("Connecting to ");
   Serial.println(ssid);
@@ -57,6 +68,9 @@ void loop() {
   }
   switchState = digitalRead(ButtonPin);
   digitalWrite(inLED,LOW);
+  float h = dht2.readHumidity();
+  float t = dht2.readTemperature();
+  float f = dht2.readTemperature(true);
   int val = analogRead(lightsensor);
   if (switchState == HIGH){
     b1 = "on";
@@ -64,6 +78,11 @@ void loop() {
   else {
     b1 = "off";
     }
+  float hic = dht2.computeHeatIndex(t, h, false);
+  dtostrf(hic, 4, 1, celsiusTemp);
+  float hif = dht2.computeHeatIndex(f, h);
+  dtostrf(hif, 6, 1, fahrenheitTemp);
+  dtostrf(h, 4, 1, humidityTemp);
   long rssi = WiFi.RSSI();
   long ch = 0 - rssi;
   char* prc_out = "0";
@@ -126,6 +145,12 @@ void loop() {
   strcat(ip_out,ip_c);
   strcat(ip_out,".");
   strcat(ip_out,ip_d);
+  if (client.publish(temp_topic, (uint8_t*)celsiusTemp, strlen(celsiusTemp), true)) {
+    Serial.println(celsiusTemp);
+    }
+  if (client.publish(hum_topic, (uint8_t*)humidityTemp, strlen(humidityTemp), true)) {
+    Serial.println(humidityTemp);
+    }
   if (client.publish(b1_topic, (uint8_t*)b1, strlen(b1), true)) {
     Serial.println(b1);
     }
@@ -143,5 +168,5 @@ void loop() {
     }
   digitalWrite(inLED,HIGH);
   Serial.println("---------------------------------------------------------");
-  delay(1000);
+  delay(10000);
 }
