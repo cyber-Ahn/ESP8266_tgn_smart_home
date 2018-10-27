@@ -168,5 +168,5 @@ void loop() {
     }
   digitalWrite(inLED,HIGH);
   Serial.println("---------------------------------------------------------");
-  delay(10000);
+  delay(60000);
 }
