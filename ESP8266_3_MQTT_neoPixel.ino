@@ -5,6 +5,7 @@
 #define PIN D1
 const int inLED = D0;
 int inc_d = 0;
+int inc_e = 0;
 
 const char* ssid = "Matrix";
 const char* wifi_password = "rhjk0096#Matrix";
@@ -86,32 +87,26 @@ uint32_t Wheel(byte WheelPos) {
 }
 
 void rainbowCycle(uint8_t wait) {
-  while(inc_d == 1)
-  {
-    uint16_t i, j;
-    for(j=0; j<256; j++) {
-      for(i=0; i<strip.numPixels(); i++) {
-        strip.setPixelColor(i, Wheel((i+j) & 255));
-      }
-      strip.show();
-      delay(wait);
+  uint16_t i, j;
+  for(j=0; j<256; j++) {
+    for(i=0; i<strip.numPixels(); i++) {
+      strip.setPixelColor(i, Wheel((i+j) & 255));
     }
+    strip.show();
+    delay(wait);
   }
 }
 
 void theaterChaseRainbow(uint8_t wait) {
-  while(inc_d == 1)
-  {
-    for (int j=0; j < 256; j++) {
-      for (int q=0; q < 3; q++) {
-        for (uint16_t i=0; i < strip.numPixels(); i=i+3) {
-          strip.setPixelColor(i+q, Wheel( (i+j) % 255));
-        }
-        strip.show();
-        delay(wait);
-        for (uint16_t i=0; i < strip.numPixels(); i=i+3) {
-          strip.setPixelColor(i+q, 0);
-        }
+  for (int j=0; j < 256; j++) {
+    for (int q=0; q < 3; q++) {
+      for (uint16_t i=0; i < strip.numPixels(); i=i+3) {
+        strip.setPixelColor(i+q, Wheel( (i+j) % 255));
+      }
+      strip.show();
+      delay(wait);
+      for (uint16_t i=0; i < strip.numPixels(); i=i+3) {
+        strip.setPixelColor(i+q, 0);
       }
     }
   }
@@ -119,6 +114,7 @@ void theaterChaseRainbow(uint8_t wait) {
 
 void callback(char* topic, byte* payload, unsigned int length) {
   inc_d = 0;
+  inc_e = 0;
   char msg[length+1];
   for (int i = 0; i < length; i++) {
     msg[i] = (char)payload[i];
@@ -126,6 +122,8 @@ void callback(char* topic, byte* payload, unsigned int length) {
   msg[length] = '\0';
   String data = msg;
   if(strcmp(topic, color_topic) == 0) {
+    inc_d = 0;
+    inc_e = 0;
     int r = atoi(getValue(data, '.', 0).c_str());
     int g = atoi(getValue(data, '.', 1).c_str());
     int b = atoi(getValue(data, '.', 2).c_str());
@@ -140,6 +138,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
   if(strcmp(topic, br_topic) == 0) {
     inc_d = 0;
+    inc_e = 0;
     int br = atoi(data.c_str());
     strip.setBrightness(br);
     strip.show();
@@ -150,26 +149,36 @@ void callback(char* topic, byte* payload, unsigned int length) {
   if(strcmp(topic, mode_topic) == 0) {
     if(strcmp(msg, "rainbow") == 0){
        inc_d = 1;
+       inc_e = 0;
        rainbowCycle(20);
        Serial.print("Mode: Rainbow");
        Serial.println();
     }
     else if(strcmp(msg, "theater") == 0){
-       inc_d = 1;
+       inc_d = 0;
+       inc_e = 1;
        theaterChaseRainbow(50);
        Serial.print("Mode: Theater");
        Serial.println();
     }
     else if(strcmp(msg, "normal") == 0){
        inc_d = 0;
+       inc_e = 0;
        Serial.print("Mode: Normal");
        Serial.println();
     }
     else{
        inc_d = 0;
+       inc_e = 0;
        Serial.print("Mode: no Mode set");
        Serial.println();
     }
+  }
+  if(inc_d == 1) {
+    rainbowCycle(20);
+  }
+  if(inc_e == 1) {
+    theaterChaseRainbow(50);
   }
 }
  
