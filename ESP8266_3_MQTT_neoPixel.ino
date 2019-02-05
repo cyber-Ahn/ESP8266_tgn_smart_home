@@ -14,6 +14,7 @@ const char* mqtt_server = "your broker ip";
 char* color_topic = "tgn/esp_3/neopixel/color";
 char* br_topic = "tgn/esp_3/neopixel/brightness";
 char* mode_topic = "tgn/esp_3/neopixel/mode";
+char* set_topic = "tgn/esp_3/neopixel/setneo"; //ledNum_color_brightness(1_255.0.0.255_50)
  
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -112,6 +113,38 @@ void theaterChaseRainbow(uint8_t wait) {
   }
 }
 
+void set_led(String data) {                                                                                //if data not "nothing"
+  int num = atoi(getValue(data, '_', 0).c_str());
+  String col = getValue(data, '_', 1);
+  int br = atoi(getValue(data, '_', 2).c_str());
+  int r = atoi(getValue(col, '.', 0).c_str());
+  int g = atoi(getValue(col, '.', 1).c_str());
+  int b = atoi(getValue(col, '.', 2).c_str());
+
+  Serial.print("Set LED: ");
+  Serial.print(num);
+  Serial.println();
+
+  strip.setBrightness(br);
+  strip.show();
+  Serial.print("Brightness: ");
+  Serial.print(br);
+  Serial.println();
+  delay(50);
+
+  strip.setPixelColor(num, strip.Color(r, g, b));
+  strip.show();
+  Serial.print("Color: ");
+  Serial.print(r);
+  Serial.print(", ");
+  Serial.print(g);
+  Serial.print(", ");
+  Serial.print(b);
+  Serial.println();
+  delay(50);
+  
+}
+
 void callback(char* topic, byte* payload, unsigned int length) {
   inc_d = 0;
   inc_e = 0;
@@ -145,6 +178,9 @@ void callback(char* topic, byte* payload, unsigned int length) {
     Serial.print("Set Brightness: ");
     Serial.print(br);
     Serial.println();
+  }
+  if(strcmp(topic, set_topic) == 0) {
+    set_led(data);
   }
   if(strcmp(topic, mode_topic) == 0) {
     if(strcmp(msg, "rainbow") == 0){
@@ -192,9 +228,42 @@ void reconnect() {
       delay(5000);
     }
   }
+  set_led("0_255.0.0.255_50");
+  delay(500);
+  set_led("4_255.0.0.255_50");
+  delay(500);
+  set_led("8_255.0.0.255_50");
+  delay(500);
+  set_led("12_255.0.0.255_50");
+  delay(500);
+  set_led("1_0.255.0.255_50");
+  delay(500);
+  set_led("5_0.255.0.255_50");
+  delay(500);
+  set_led("9_0.255.0.255_50");
+  delay(500);
+  set_led("13_0.255.0.255_50");
+  delay(500);
+  set_led("2_0.0.255.255_50");
+  delay(500);
+  set_led("6_0.0.255.255_50");
+  delay(500);
+  set_led("10_0.0.255.255_50");
+  delay(500);
+  set_led("14_0.0.255.255_50");
+  delay(500);
+  set_led("3_255.0.255.255_50");
+  delay(500);
+  set_led("7_255.0.255.255_50");
+  delay(500);
+  set_led("11_255.0.255.255_50");
+  delay(500);
+  set_led("15_255.0.255.255_50");
+  delay(500);
   client.subscribe(mode_topic);
   client.subscribe(color_topic);
   client.subscribe(br_topic);
+  client.subscribe(set_topic);
   Serial.println("MQTT Connected...");
 }
  
