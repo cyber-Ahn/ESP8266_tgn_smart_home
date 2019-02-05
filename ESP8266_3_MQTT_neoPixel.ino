@@ -113,36 +113,34 @@ void theaterChaseRainbow(uint8_t wait) {
   }
 }
 
-void set_led(String data) {                                                                                //if data not "nothing"
-  int num = atoi(getValue(data, '_', 0).c_str());
-  String col = getValue(data, '_', 1);
-  int br = atoi(getValue(data, '_', 2).c_str());
-  int r = atoi(getValue(col, '.', 0).c_str());
-  int g = atoi(getValue(col, '.', 1).c_str());
-  int b = atoi(getValue(col, '.', 2).c_str());
-
-  Serial.print("Set LED: ");
-  Serial.print(num);
-  Serial.println();
-
-  strip.setBrightness(br);
-  strip.show();
-  Serial.print("Brightness: ");
-  Serial.print(br);
-  Serial.println();
-  delay(50);
-
-  strip.setPixelColor(num, strip.Color(r, g, b));
-  strip.show();
-  Serial.print("Color: ");
-  Serial.print(r);
-  Serial.print(", ");
-  Serial.print(g);
-  Serial.print(", ");
-  Serial.print(b);
-  Serial.println();
-  delay(50);
-  
+void set_led(String data) {
+  if (data != "nothing"){
+    int num = atoi(getValue(data, '_', 0).c_str());
+    String col = getValue(data, '_', 1);
+    int br = atoi(getValue(data, '_', 2).c_str());
+    int r = atoi(getValue(col, '.', 0).c_str());
+    int g = atoi(getValue(col, '.', 1).c_str());
+    int b = atoi(getValue(col, '.', 2).c_str());
+    Serial.print("Set LED: ");
+    Serial.print(num);
+    Serial.println();
+    strip.setBrightness(br);
+    strip.show();
+    Serial.print("Brightness: ");
+    Serial.print(br);
+    Serial.println();
+    delay(50);
+    strip.setPixelColor(num, strip.Color(r, g, b));
+    strip.show();
+    Serial.print("Color: ");
+    Serial.print(r);
+    Serial.print(", ");
+    Serial.print(g);
+    Serial.print(", ");
+    Serial.print(b);
+    Serial.println();
+    delay(50);
+  }
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
