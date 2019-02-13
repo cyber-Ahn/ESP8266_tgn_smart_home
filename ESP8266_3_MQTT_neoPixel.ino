@@ -7,14 +7,15 @@ const int inLED = D0;
 int inc_d = 0;
 int inc_e = 0;
 
-const char* ssid = "your ssid";
-const char* wifi_password = "your wifi password";
-const char* mqtt_server = "your broker ip";
+const char* ssid = "Matrix";
+const char* wifi_password = "rhjk0096#Matrix";
+const char* mqtt_server = "192.168.0.98";
 
 char* color_topic = "tgn/esp_3/neopixel/color";
 char* br_topic = "tgn/esp_3/neopixel/brightness";
 char* mode_topic = "tgn/esp_3/neopixel/mode";
-char* set_topic = "tgn/esp_3/neopixel/setneo"; //ledNum_color_brightness(1_255.0.0.255_50)
+char* set_topic = "tgn/esp_3/neopixel/setneo";
+const char* con_topic = "tgn/esp_3/connection/ip";
  
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -130,7 +131,7 @@ void set_led(String data) {
     Serial.print(br);
     Serial.println();
     delay(50);
-    strip.setPixelColor(num, strip.Color(r, g, b));
+    strip.setPixelColor(num, strip.Color(r, g, b, br));
     strip.show();
     Serial.print("Color: ");
     Serial.print(r);
@@ -225,6 +226,30 @@ void reconnect() {
       Serial.println(" retrying in 5 seconds");
       delay(5000);
     }
+  }
+  char ip_out[50] = "";
+  IPAddress ip_r = WiFi.localIP();
+  byte first_octet = ip_r[0];
+  byte second_octet = ip_r[1];
+  byte third_octet = ip_r[2];
+  byte fourth_octet = ip_r[3];
+  static char ip_a[7];
+  static char ip_b[7];
+  static char ip_c[7];
+  static char ip_d[7];
+  dtostrf(first_octet, 2, 0, ip_a);
+  dtostrf(second_octet, 2, 0, ip_b);
+  dtostrf(third_octet, 1, 0, ip_c);
+  dtostrf(fourth_octet, 2, 0, ip_d);
+  strcat(ip_out,ip_a);
+  strcat(ip_out,".");
+  strcat(ip_out,ip_b);
+  strcat(ip_out,".");
+  strcat(ip_out,ip_c);
+  strcat(ip_out,".");
+  strcat(ip_out,ip_d);
+  if (client.publish(con_topic, (uint8_t*)ip_out, strlen(ip_out), true)) {
+    Serial.println(ip_out);
   }
   set_led("0_255.0.0.255_50");
   delay(500);
