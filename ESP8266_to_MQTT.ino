@@ -1,16 +1,18 @@
+#include "ESPHelper.h"
+#include <Metro.h>
 #include <Wire.h>
 #include "SSD1306Wire.h"
 #include <ESP8266WiFi.h>
-#include <PubSubClient.h>
 #include <ThingSpeak.h>
-
 #include "DHT.h"
+
 #define DHTTYPE DHT22
 #define lightsensor A0
 
 const char* ssid = "your ssid";
 const char* wifi_password = "your wifi password";
 const char* mqtt_server = "your broker ip";
+
 const char* temp_topic = "tgn/esp_1/temp/sensor_1";
 const char* hum_topic = "tgn/esp_1/temp/sensor_2";
 const char* b1_topic = "tgn/esp_1/button/b1";
@@ -18,7 +20,10 @@ const char* wifi1_topic = "tgn/esp_1/wifi/pre";
 const char* wifi2_topic = "tgn/esp_1/wifi/rssi";
 const char* light_topic = "tgn/esp_1/analog/sensor_1";
 const char* con_topic = "tgn/esp_1/connection/ip";
-const char* clientID = "NodeMCU Modul 1";
+char* color_topic = "tgn/esp_3/neopixel/color";
+char* br_topic = "tgn/esp_3/neopixel/brightness";
+const char* update_topic = "tgn/esp_1/update";
+const char* clientID = "NodeMCU_1 V3.1";
 unsigned long myChannelNumber = 469382;
 const char * myWriteAPIKey = "Q24CHI315VCNGER1";
 const int DHTPin = D4;
@@ -31,9 +36,18 @@ static char humidityTemp[7];
 int switchState = 0;
 int time_ts = 0;
 int screen = 0;
+int neopixel = 0;
 
 WiFiClient wifiClient;
-PubSubClient client(mqtt_server, 1883, wifiClient);
+netInfo homeNet = {  .mqttHost = mqtt_server,
+          .mqttUser = "",
+          .mqttPass = "",
+          .mqttPort = 1883,
+          .ssid = ssid, 
+          .pass = wifi_password};
+
+ESPHelper myESP(&homeNet);
+Metro publishTimer = Metro(30000);
 DHT dht2(DHTPin, DHTTYPE);
 SSD1306Wire  display(0x3c, D3, D5);
 
@@ -188,6 +202,14 @@ void setup() {
     delay(500);
     Serial.print(".");
   }
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+  myESP.OTA_enable();
+  myESP.OTA_setPassword("esp1");
+  myESP.OTA_setHostnameWithVersion(clientID);
+  myESP.addSubscription(update_topic);
+  myESP.setMQTTCallback(callback);
+  myESP.begin();
   Serial.println("WiFi connected");
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
@@ -195,22 +217,9 @@ void setup() {
   ThingSpeak.begin(wifiClient);
 }
 
-void reconnect(){
-  if (client.connect(clientID)) {
-    Serial.println("Connected to MQTT Broker!");
-  }
-  else {
-    Serial.println("Connection to MQTT Broker failed...");
-    delay(5000);
-  }
-}
-
 void loop() {
-  if (!client.connected()) {
-    reconnect();
-  }
+  myESP.loop();
   switchState = digitalRead(ButtonPin);
-  digitalWrite(inLED,LOW);
   float h = dht2.readHumidity();
   float t = dht2.readTemperature();
   float f = dht2.readTemperature(true);
@@ -288,61 +297,78 @@ void loop() {
   strcat(ip_out,ip_c);
   strcat(ip_out,".");
   strcat(ip_out,ip_d);
-  display.clear();
-  display.display();
-  delay(3000);
-  if (screen == 0) {
-    display.setTextAlignment(TEXT_ALIGN_LEFT);
-    display.setFont(Dialog_bold_10);
-    display.setContrast(255);
-    display.drawString(0, 0, "WIFI:           %");
-    display.drawString(31, 0, prc_out);
-    display.drawString(0, 12, "TEMP:          °C");
-    display.drawString(31, 12, celsiusTemp);
-    display.drawString(0, 24, "HUMI:           %");
-    display.drawString(31, 24, humidityTemp);
-    display.drawString(0, 36, "B1:");
-    display.drawString(31, 36, b1);
-    display.drawString(0, 48, "LIGH:");
-    display.drawString(31, 48, lis);
+  if(publishTimer.check()){
+    String data = lis;
+    int lis_c = atoi(data.c_str());
+    Serial.println(lis_c);
+    if(lis_c <= 20){
+      if(neopixel == 0){
+        myESP.publish(color_topic, "255.0.0.255", true);
+        myESP.publish(br_topic, "127", true);
+        neopixel = 1;
+        Serial.println("Neo ON");
+      }
+    }
+    if(lis_c >= 70){
+      if(neopixel == 1){
+        myESP.publish(br_topic, "10", true);
+        myESP.publish(color_topic, "0.0.0.255", true);
+        neopixel = 0;
+        Serial.println("Neo OFF");
+      }
+    }
+    digitalWrite(inLED,LOW);
+    display.clear();
     display.display();
-    screen = 1;
-  }
-  else if (screen == 1) {
-    display.drawXbm(0, 0, tgn_width, tgn_height, tgn_bits);
-    display.display();
-    screen = 0;
-  }
-  if (client.publish(temp_topic, (uint8_t*)celsiusTemp, strlen(celsiusTemp), true)) {
+    if (screen == 0) {
+      display.setTextAlignment(TEXT_ALIGN_LEFT);
+      display.setFont(Dialog_bold_10);
+      display.setContrast(255);
+      display.drawString(0, 0, "WIFI:           %");
+      display.drawString(31, 0, prc_out);
+      display.drawString(0, 12, "TEMP:          °C");
+      display.drawString(31, 12, celsiusTemp);
+      display.drawString(0, 24, "HUMI:           %");
+      display.drawString(31, 24, humidityTemp);
+      display.drawString(0, 36, "B1:");
+      display.drawString(31, 36, b1);
+      display.drawString(0, 48, "LIGH:");
+      display.drawString(31, 48, lis);
+      display.display();
+      screen = 1;
+    }
+    else if (screen == 1) {
+      display.drawXbm(0, 0, tgn_width, tgn_height, tgn_bits);
+      display.display();
+      screen = 0;
+    }
+    myESP.publish(temp_topic, celsiusTemp, true);
     Serial.println(celsiusTemp);
-    }
-  if (client.publish(hum_topic, (uint8_t*)humidityTemp, strlen(humidityTemp), true)) {
+    myESP.publish(hum_topic, humidityTemp, true);
     Serial.println(humidityTemp);
-    }
-  if (client.publish(b1_topic, (uint8_t*)b1, strlen(b1), true)) {
+    myESP.publish(b1_topic, b1, true);
     Serial.println(b1);
-    }
-  if (client.publish(wifi1_topic, (uint8_t*)prc_out, strlen(prc_out), true)) {
+    myESP.publish(wifi1_topic, prc_out, true);
     Serial.println(prc_out);
-    }
-  if (client.publish(wifi2_topic, (uint8_t*)rssi_x, strlen(rssi_x), true)) {
+    myESP.publish(wifi2_topic, rssi_x, true);
     Serial.println(rssi_x);
-    }
-  if (client.publish(light_topic, (uint8_t*)lis, strlen(lis), true)) {
+    myESP.publish(light_topic, lis, true);
     Serial.println(lis);
-    }
-  if (client.publish(con_topic, (uint8_t*)ip_out, strlen(ip_out), true)) {
+    myESP.publish(con_topic, ip_out, true);
     Serial.println(ip_out);
-    }
-  if (time_ts == 0 or time_ts ==3600) {
-    ThingSpeak.setField(1,celsiusTemp);
-    ThingSpeak.setField(2,humidityTemp);
-    ThingSpeak.setField(3,lis);
-    ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
-    time_ts = 0;
-    }
-  time_ts = time_ts + 30;
-  digitalWrite(inLED,HIGH);
-  Serial.println("---------------------------------------------------------");
-  delay(30000);
+    if (time_ts == 0 or time_ts ==3600) {
+      ThingSpeak.setField(1,celsiusTemp);
+      ThingSpeak.setField(2,humidityTemp);
+      ThingSpeak.setField(3,lis);
+      ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
+      time_ts = 0;
+      }
+    time_ts = time_ts + 30;
+    digitalWrite(inLED,HIGH);
+    Serial.println("---------------------------------------------------------");
+  }
+  yield();
+}
+void callback(char* topic, uint8_t* payload, unsigned int length) {
+  //put mqtt callback code here
 }

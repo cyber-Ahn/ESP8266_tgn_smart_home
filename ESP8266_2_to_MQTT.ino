@@ -1,8 +1,7 @@
-
-#include <ESP8266WiFi.h>
-#include <PubSubClient.h>
-
+#include "ESPHelper.h"
+#include <Metro.h>
 #include "DHT.h"
+
 #define DHTTYPE DHT22
 #define lightsensor A0
 
@@ -17,8 +16,8 @@ const char* wifi1_topic = "tgn/esp_2/wifi/pre";
 const char* wifi2_topic = "tgn/esp_2/wifi/rssi";
 const char* light_topic = "tgn/esp_2/analog/sensor_1";
 const char* con_topic = "tgn/esp_2/connection/ip";
-const char* clientID = "NodeMCU Modul 2";
-
+const char* update_topic = "tgn/esp_2/update";
+const char* clientID = "NodeMCU_2 V1.1";
 const int DHTPin = D4;
 const int ButtonPin = D7;
 const int inLED = D0;
@@ -28,9 +27,16 @@ static char fahrenheitTemp[7];
 static char humidityTemp[7];
 int switchState = 0;
 
-WiFiClient wifiClient;
-PubSubClient client(mqtt_server, 1883, wifiClient);
+netInfo homeNet = {  .mqttHost = mqtt_server,
+          .mqttUser = "",
+          .mqttPass = "",
+          .mqttPort = 1883,
+          .ssid = ssid, 
+          .pass = wifi_password};
+
+ESPHelper myESP(&homeNet);
 DHT dht2(DHTPin, DHTTYPE);
+Metro publishTimer = Metro(610000);
 
 void setup() {
   pinMode(inLED, OUTPUT);
@@ -41,31 +47,20 @@ void setup() {
   Serial.println();
   Serial.print("Connecting to ");
   Serial.println(ssid);
-  WiFi.begin(ssid, wifi_password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
+  myESP.OTA_enable();
+  myESP.OTA_setPassword("esp2");
+  myESP.OTA_setHostnameWithVersion(clientID);
+  myESP.addSubscription(update_topic);
+  myESP.setMQTTCallback(callback);
+  myESP.begin();
   Serial.println("WiFi connected");
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
   Serial.println(WiFi.macAddress());
 }
 
-void reconnect(){
-  if (client.connect(clientID)) {
-    Serial.println("Connected to MQTT Broker!");
-  }
-  else {
-    Serial.println("Connection to MQTT Broker failed...");
-    delay(5000);
-  }
-}
-
 void loop() {
-  if (!client.connected()) {
-    reconnect();
-  }
+  myESP.loop();  
   switchState = digitalRead(ButtonPin);
   digitalWrite(inLED,LOW);
   float h = dht2.readHumidity();
@@ -145,28 +140,26 @@ void loop() {
   strcat(ip_out,ip_c);
   strcat(ip_out,".");
   strcat(ip_out,ip_d);
-  if (client.publish(temp_topic, (uint8_t*)celsiusTemp, strlen(celsiusTemp), true)) {
+  if(publishTimer.check()){
+    myESP.publish(temp_topic, celsiusTemp, true);
     Serial.println(celsiusTemp);
-    }
-  if (client.publish(hum_topic, (uint8_t*)humidityTemp, strlen(humidityTemp), true)) {
+    myESP.publish(hum_topic, humidityTemp, true);
     Serial.println(humidityTemp);
-    }
-  if (client.publish(b1_topic, (uint8_t*)b1, strlen(b1), true)) {
+    myESP.publish(b1_topic, b1, true);
     Serial.println(b1);
-    }
-  if (client.publish(wifi1_topic, (uint8_t*)prc_out, strlen(prc_out), true)) {
+    myESP.publish(wifi1_topic, prc_out, true);
     Serial.println(prc_out);
-    }
-  if (client.publish(wifi2_topic, (uint8_t*)rssi_x, strlen(rssi_x), true)) {
+    myESP.publish(wifi2_topic, rssi_x, true);
     Serial.println(rssi_x);
-    }
-  if (client.publish(light_topic, (uint8_t*)lis, strlen(lis), true)) {
+    myESP.publish(light_topic, lis, true);
     Serial.println(lis);
-    }
-  if (client.publish(con_topic, (uint8_t*)ip_out, strlen(ip_out), true)) {
+    myESP.publish(con_topic, ip_out, true);
     Serial.println(ip_out);
-    }
-  digitalWrite(inLED,HIGH);
-  Serial.println("---------------------------------------------------------");
-  delay(610000);
+    digitalWrite(inLED,HIGH);
+    Serial.println("---------------------------------------------------------");
+  }
+  yield();
+}
+void callback(char* topic, uint8_t* payload, unsigned int length) {
+  //put mqtt callback code here
 }

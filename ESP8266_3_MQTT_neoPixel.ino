@@ -1,11 +1,7 @@
 #include <Adafruit_NeoPixel.h>
-#include <ESP8266WiFi.h>
-#include <PubSubClient.h>
+#include "ESPHelper.h"
 
 #define PIN D1
-const int inLED = D0;
-int inc_d = 0;
-int inc_e = 0;
 
 const char* ssid = "your ssid";
 const char* wifi_password = "your wifi password";
@@ -16,9 +12,21 @@ char* br_topic = "tgn/esp_3/neopixel/brightness";
 char* mode_topic = "tgn/esp_3/neopixel/mode";
 char* set_topic = "tgn/esp_3/neopixel/setneo";
 const char* con_topic = "tgn/esp_3/connection/ip";
- 
-WiFiClient espClient;
-PubSubClient client(espClient);
+const char* update_topic = "tgn/esp_3/update";
+const char* clientID = "NodeMCU_3 V1.5";
+const int inLED = D0;
+int inc_d = 0;
+int inc_e = 0;
+
+netInfo homeNet = {  .mqttHost = mqtt_server,
+          .mqttUser = "",
+          .mqttPass = "", 
+          .mqttPort = 1883,
+          .ssid = ssid, 
+          .pass = wifi_password};
+
+ESPHelper myESP(&homeNet);
+
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(60, PIN, NEO_GRB + NEO_KHZ800);
 long lastMsg = 0;
 char msg[50];
@@ -30,26 +38,78 @@ void setup() {
   strip.show();
   pinMode(inLED, OUTPUT);
   Serial.begin(9600);
-  setup_wifi();
-  client.setServer(mqtt_server, 1883);
-  client.setCallback(callback);
-}
- 
-void setup_wifi() {
-    delay(10);
-    Serial.println();
-    Serial.print("Connecting to ");
-    Serial.println(ssid);
-    WiFi.begin(ssid, wifi_password);
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
-    }
-    Serial.println("");
-    Serial.println("WiFi connected");
-    Serial.println("IP address: ");
-    Serial.println(WiFi.localIP());
-    Serial.println(WiFi.macAddress());
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+  myESP.OTA_enable();
+  myESP.OTA_setPassword("esp3");
+  myESP.OTA_setHostnameWithVersion(clientID);
+  myESP.addSubscription(color_topic);
+  myESP.addSubscription(br_topic);
+  myESP.addSubscription(mode_topic);
+  myESP.addSubscription(set_topic);
+  myESP.addSubscription(update_topic);
+  myESP.setMQTTCallback(callback);
+  myESP.begin();
+  Serial.println("WiFi connected");
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+  Serial.println(WiFi.macAddress());
+  char ip_out[50] = "";
+  IPAddress ip_r = WiFi.localIP();
+  byte first_octet = ip_r[0];
+  byte second_octet = ip_r[1];
+  byte third_octet = ip_r[2];
+  byte fourth_octet = ip_r[3];
+  static char ip_a[7];
+  static char ip_b[7];
+  static char ip_c[7];
+  static char ip_d[7];
+  dtostrf(first_octet, 2, 0, ip_a);
+  dtostrf(second_octet, 2, 0, ip_b);
+  dtostrf(third_octet, 1, 0, ip_c);
+  dtostrf(fourth_octet, 2, 0, ip_d);
+  strcat(ip_out,ip_a);
+  strcat(ip_out,".");
+  strcat(ip_out,ip_b);
+  strcat(ip_out,".");
+  strcat(ip_out,ip_c);
+  strcat(ip_out,".");
+  strcat(ip_out,ip_d);
+  set_led("0_255.0.0.255_50");
+  delay(500);
+  set_led("4_255.0.0.255_50");
+  delay(500);
+  set_led("8_255.0.0.255_50");
+  delay(500);
+  set_led("12_255.0.0.255_50");
+  delay(500);
+  set_led("1_0.255.0.255_50");
+  delay(500);
+  set_led("5_0.255.0.255_50");
+  delay(500);
+  set_led("9_0.255.0.255_50");
+  delay(500);
+  set_led("13_0.255.0.255_50");
+  delay(500);
+  set_led("2_0.0.255.255_50");
+  delay(500);
+  set_led("6_0.0.255.255_50");
+  delay(500);
+  set_led("10_0.0.255.255_50");
+  delay(500);
+  set_led("14_0.0.255.255_50");
+  delay(500);
+  set_led("3_255.0.255.255_50");
+  delay(500);
+  set_led("7_255.0.255.255_50");
+  delay(500);
+  set_led("11_255.0.255.255_50");
+  delay(500);
+  set_led("15_255.0.255.255_50");
+  delay(500);
+  myESP.publish(con_topic, ip_out, true);
+  Serial.println(ip_out);
 }
 
 void colorWipe(uint32_t c, uint8_t wait) {
@@ -145,6 +205,7 @@ void set_led(String data) {
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
+  digitalWrite(inLED,LOW); 
   inc_d = 0;
   inc_e = 0;
   char msg[length+1];
@@ -215,84 +276,11 @@ void callback(char* topic, byte* payload, unsigned int length) {
   if(inc_e == 1) {
     theaterChaseRainbow(50);
   }
-}
- 
-void reconnect() {
-  while (!client.connected()) {
-    Serial.println("Reconnecting MQTT...");
-    if (!client.connect("ESP8266Client")) {
-      Serial.print("failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" retrying in 5 seconds");
-      delay(5000);
-    }
-  }
-  char ip_out[50] = "";
-  IPAddress ip_r = WiFi.localIP();
-  byte first_octet = ip_r[0];
-  byte second_octet = ip_r[1];
-  byte third_octet = ip_r[2];
-  byte fourth_octet = ip_r[3];
-  static char ip_a[7];
-  static char ip_b[7];
-  static char ip_c[7];
-  static char ip_d[7];
-  dtostrf(first_octet, 2, 0, ip_a);
-  dtostrf(second_octet, 2, 0, ip_b);
-  dtostrf(third_octet, 1, 0, ip_c);
-  dtostrf(fourth_octet, 2, 0, ip_d);
-  strcat(ip_out,ip_a);
-  strcat(ip_out,".");
-  strcat(ip_out,ip_b);
-  strcat(ip_out,".");
-  strcat(ip_out,ip_c);
-  strcat(ip_out,".");
-  strcat(ip_out,ip_d);
-  if (client.publish(con_topic, (uint8_t*)ip_out, strlen(ip_out), true)) {
-    Serial.println(ip_out);
-  }
-  set_led("0_255.0.0.255_50");
-  delay(500);
-  set_led("4_255.0.0.255_50");
-  delay(500);
-  set_led("8_255.0.0.255_50");
-  delay(500);
-  set_led("12_255.0.0.255_50");
-  delay(500);
-  set_led("1_0.255.0.255_50");
-  delay(500);
-  set_led("5_0.255.0.255_50");
-  delay(500);
-  set_led("9_0.255.0.255_50");
-  delay(500);
-  set_led("13_0.255.0.255_50");
-  delay(500);
-  set_led("2_0.0.255.255_50");
-  delay(500);
-  set_led("6_0.0.255.255_50");
-  delay(500);
-  set_led("10_0.0.255.255_50");
-  delay(500);
-  set_led("14_0.0.255.255_50");
-  delay(500);
-  set_led("3_255.0.255.255_50");
-  delay(500);
-  set_led("7_255.0.255.255_50");
-  delay(500);
-  set_led("11_255.0.255.255_50");
-  delay(500);
-  set_led("15_255.0.255.255_50");
-  delay(500);
-  client.subscribe(mode_topic);
-  client.subscribe(color_topic);
-  client.subscribe(br_topic);
-  client.subscribe(set_topic);
-  Serial.println("MQTT Connected...");
+  delay(1000);
+  digitalWrite(inLED,HIGH);
 }
  
 void loop() {
-  if (!client.connected()) {
-    reconnect();
-  }
-  client.loop();
+  myESP.loop();
+  yield();
 }
