@@ -10,3 +10,11 @@ needed Libs:
 + thingspeak-arduino-master https://github.com/mathworks/thingspeak-arduino
 + PubSubClient https://github.com/knolleary/pubsubclient
 + Adafruit_NeoPixel https://github.com/adafruit/Adafruit_NeoPixel
++ esp8266-oled-ssd1306 https://github.com/ThingPulse/esp8266-oled-ssd1306
++ thingspeak-arduino https://github.com/mathworks/thingspeak-arduino
++ WS2812FX https://github.com/kitesurfer1404/WS2812FX
++ ESPHelper https://github.com/ItKindaWorks/ESPHelper
++ Metro-Arduino-Wiring https://github.com/thomasfredericks/Metro-Arduino-Wiring
++ ArduinoJson https://github.com/bblanchon/ArduinoJson
++ python-2.7.14 for wlan sketch update https://www.python.org/downloads/release/python-2714/
+
