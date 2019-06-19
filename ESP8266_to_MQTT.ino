@@ -8,9 +8,9 @@
 #define DHTTYPE DHT22
 #define lightsensor A0
 
-const char* ssid = "Matrix";
-const char* wifi_password = "rhjk0096#Matrix";
-const char* mqtt_server = "192.168.0.98";
+const char* ssid = "your ssid";
+const char* wifi_password = "your wifi password";
+const char* mqtt_server = "your broker ip";
 
 const char* temp_topic = "tgn/esp_1/temp/sensor_1";
 const char* hum_topic = "tgn/esp_1/temp/sensor_2";
