@@ -3,15 +3,14 @@
 #include <Wire.h>
 #include "SSD1306Wire.h"
 #include <ESP8266WiFi.h>
-#include <ThingSpeak.h>
 #include "DHT.h"
 
 #define DHTTYPE DHT22
 #define lightsensor A0
 
-const char* ssid = "your ssid";
-const char* wifi_password = "your wifi password";
-const char* mqtt_server = "your broker ip";
+const char* ssid = "Matrix";
+const char* wifi_password = "rhjk0096#Matrix";
+const char* mqtt_server = "192.168.0.98";
 
 const char* temp_topic = "tgn/esp_1/temp/sensor_1";
 const char* hum_topic = "tgn/esp_1/temp/sensor_2";
@@ -20,25 +19,23 @@ const char* wifi1_topic = "tgn/esp_1/wifi/pre";
 const char* wifi2_topic = "tgn/esp_1/wifi/rssi";
 const char* light_topic = "tgn/esp_1/analog/sensor_1";
 const char* con_topic = "tgn/esp_1/connection/ip";
+const char* update_topic = "tgn/esp_1/update";
 char* color_topic = "tgn/esp_3/neopixel/color";
 char* br_topic = "tgn/esp_3/neopixel/brightness";
-const char* update_topic = "tgn/esp_1/update";
 const char* clientID = "NodeMCU_1 V3.1";
-unsigned long myChannelNumber = 469382;
-const char * myWriteAPIKey = "Q24CHI315VCNGER1";
 const int DHTPin = D4;
-const int ButtonPin = D2;
+const int ButtonPin = D7;
+const int DisplayPin = D8;
 const int inLED = D0;
 char* b1 = "off";
 static char celsiusTemp[7];
 static char fahrenheitTemp[7];
 static char humidityTemp[7];
 int switchState = 0;
-int time_ts = 0;
+int switchStateB = 0;
 int screen = 0;
-int neopixel = 0;
+int neopixel = 1;
 
-WiFiClient wifiClient;
 netInfo homeNet = {  .mqttHost = mqtt_server,
           .mqttUser = "",
           .mqttPass = "",
@@ -184,12 +181,11 @@ void setup() {
   display.clear();
   pinMode(inLED, OUTPUT);
   pinMode(ButtonPin, INPUT);
+  pinMode(DisplayPin, INPUT);
   Serial.begin(9600);
   delay(10);
   dht2.begin();
   Serial.println();
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
   display.setFont(ArialMT_Plain_16);
   display.drawString(0, 0, "Connecting to ");
   display.drawString(0, 16, ssid);
@@ -197,11 +193,6 @@ void setup() {
   display.drawString(0, 48, mqtt_server);
   display.display();
   delay(5000);
-  WiFi.begin(ssid, wifi_password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
   Serial.print("Connecting to ");
   Serial.println(ssid);
   myESP.OTA_enable();
@@ -214,16 +205,19 @@ void setup() {
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
   Serial.println(WiFi.macAddress());
-  ThingSpeak.begin(wifiClient);
 }
 
 void loop() {
   myESP.loop();
   switchState = digitalRead(ButtonPin);
+  switchStateB = digitalRead(DisplayPin);
   float h = dht2.readHumidity();
   float t = dht2.readTemperature();
   float f = dht2.readTemperature(true);
   int val = analogRead(lightsensor);
+  if (switchStateB == HIGH){
+    screen = 0;
+    }
   if (switchState == HIGH){
     b1 = "on";
     }
@@ -309,7 +303,7 @@ void loop() {
         Serial.println("Neo ON");
       }
     }
-    if(lis_c >= 70){
+    if(lis_c >= 50){
       if(neopixel == 1){
         myESP.publish(br_topic, "10", true);
         myESP.publish(color_topic, "0.0.0.255", true);
@@ -340,8 +334,12 @@ void loop() {
     else if (screen == 1) {
       display.drawXbm(0, 0, tgn_width, tgn_height, tgn_bits);
       display.display();
-      screen = 0;
+      screen = 2;
     }
+    else if (screen == 2) {
+      display.clear();
+    }
+    delay(5000);
     myESP.publish(temp_topic, celsiusTemp, true);
     Serial.println(celsiusTemp);
     myESP.publish(hum_topic, humidityTemp, true);
@@ -356,14 +354,7 @@ void loop() {
     Serial.println(lis);
     myESP.publish(con_topic, ip_out, true);
     Serial.println(ip_out);
-    if (time_ts == 0 or time_ts ==3600) {
-      ThingSpeak.setField(1,celsiusTemp);
-      ThingSpeak.setField(2,humidityTemp);
-      ThingSpeak.setField(3,lis);
-      ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
-      time_ts = 0;
-      }
-    time_ts = time_ts + 30;
+    Serial.println(screen);
     digitalWrite(inLED,HIGH);
     Serial.println("---------------------------------------------------------");
   }

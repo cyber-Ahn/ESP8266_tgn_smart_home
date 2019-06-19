@@ -6,9 +6,9 @@
 
 #define PIN D1
 
-const char* ssid = "your ssid";
-const char* wifi_password = "your wifi password";
-const char* mqtt_server = "your broker ip";
+const char* ssid = "Matrix";
+const char* wifi_password = "rhjk0096#Matrix";
+const char* mqtt_server = "192.168.0.98";
 
 char* color_topic = "tgn/esp_3/neopixel/color";
 char* br_topic = "tgn/esp_3/neopixel/brightness";
@@ -18,12 +18,14 @@ const char* con_topic = "tgn/esp_3/connection/ip";
 const char* update_topic = "tgn/esp_3/update";
 const char* clientID = "NodeMCU_3 V1.5";
 const int inLED = D0;
+const int DisplayPin = D8;
 int inc_d = 0;
 int inc_e = 0;
 int screen = 0;
 long lastMsg = 0;
 char msg[50];
 int value = 0;
+int switchStateB = 0;
 String c_d = "";
 String b_d = "";
 String m_d = "";
@@ -176,6 +178,7 @@ void setup() {
   strip.setBrightness(10);
   strip.show();
   pinMode(inLED, OUTPUT);
+  pinMode(DisplayPin, INPUT);
   Serial.begin(9600);
   Serial.println();
   Serial.print("Connecting to ");
@@ -410,6 +413,10 @@ void callback(char* topic, byte* payload, unsigned int length) {
  
 void loop() {
   myESP.loop();
+  switchStateB = digitalRead(DisplayPin);
+  if (switchStateB == HIGH){
+    screen = 0;
+    }
   if(publishTimer.check()){
     char ip_out[50] = "";
     IPAddress ip_r = WiFi.localIP();
@@ -455,7 +462,10 @@ void loop() {
     else if (screen == 1) {
       display.drawXbm(0, 0, tgn_width, tgn_height, tgn_bits);
       display.display();
-      screen = 0;
+      screen = 2;
+    }
+    else if (screen == 2) {
+      display.clear();
     }
   }
   yield();

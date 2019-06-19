@@ -8,9 +8,9 @@
 #define DHTTYPE DHT22
 #define lightsensor A0
 
-const char* ssid = "your ssid";
-const char* wifi_password = "your wifi password";
-const char* mqtt_server = "your broker ip";
+const char* ssid = "Matrix";
+const char* wifi_password = "rhjk0096#Matrix";
+const char* mqtt_server = "192.168.0.98";
 
 const char* temp_topic = "tgn/esp_2/temp/sensor_1";
 const char* hum_topic = "tgn/esp_2/temp/sensor_2";
@@ -23,12 +23,14 @@ const char* update_topic = "tgn/esp_2/update";
 const char* clientID = "NodeMCU_2 V1.1";
 const int DHTPin = D4;
 const int ButtonPin = D7;
+const int DisplayPin = D8;
 const int inLED = D0;
 char* b1 = "off";
 static char celsiusTemp[7];
 static char fahrenheitTemp[7];
 static char humidityTemp[7];
 int switchState = 0;
+int switchStateB = 0;
 int screen = 0;
 
 netInfo homeNet = {  .mqttHost = mqtt_server,
@@ -204,10 +206,14 @@ void setup() {
 void loop() {
   myESP.loop();
   switchState = digitalRead(ButtonPin);
+  switchStateB = digitalRead(DisplayPin);
   float h = dht2.readHumidity();
   float t = dht2.readTemperature();
   float f = dht2.readTemperature(true);
   int val = analogRead(lightsensor);
+  if (switchStateB == HIGH){
+    screen = 0;
+    }
   if (switchState == HIGH){
     b1 = "on";
     }
@@ -305,7 +311,10 @@ void loop() {
     else if (screen == 1) {
       display.drawXbm(0, 0, tgn_width, tgn_height, tgn_bits);
       display.display();
-      screen = 0;
+      screen = 2;
+    }
+    else if (screen == 2) {
+      display.clear();
     }
     delay(5000);
     myESP.publish(temp_topic, celsiusTemp, true);
