@@ -6,9 +6,9 @@
 
 #define PIN D1
 
-const char* ssid = "Matrix";
-const char* wifi_password = "rhjk0096#Matrix";
-const char* mqtt_server = "192.168.0.98";
+const char* ssid = "your ssid";
+const char* wifi_password = "your wifi password";
+const char* mqtt_server = "your broker ip";
 
 char* color_topic = "tgn/esp_3/neopixel/color";
 char* br_topic = "tgn/esp_3/neopixel/brightness";
