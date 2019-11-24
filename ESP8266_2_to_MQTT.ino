@@ -8,10 +8,11 @@
 #define DHTTYPE DHT22
 #define lightsensor A0
 
-const char* ssid = "your ssid";
-const char* wifi_password = "your wifi password";
-const char* mqtt_server = "your broker ip";
+const char* ssid = "Matrix";
+const char* wifi_password = "rhjk0096#Matrix";
+const char* mqtt_server = "192.168.0.98";
 
+char* reset_topic = "tgn/system/reboot/esp2";
 const char* temp_topic = "tgn/esp_2/temp/sensor_1";
 const char* hum_topic = "tgn/esp_2/temp/sensor_2";
 const char* b1_topic = "tgn/esp_2/button/b1";
@@ -20,7 +21,7 @@ const char* wifi2_topic = "tgn/esp_2/wifi/rssi";
 const char* light_topic = "tgn/esp_2/analog/sensor_1";
 const char* con_topic = "tgn/esp_2/connection/ip";
 const char* update_topic = "tgn/esp_2/update";
-const char* clientID = "NodeMCU_2 V1.1";
+const char* clientID = "NodeMCU_2 V1.2";
 const int DHTPin = D4;
 const int ButtonPin = D7;
 const int DisplayPin = D8;
@@ -194,6 +195,7 @@ void setup() {
   myESP.OTA_enable();
   myESP.OTA_setPassword("esp2");
   myESP.OTA_setHostnameWithVersion(clientID);
+  myESP.addSubscription(reset_topic);
   myESP.addSubscription(update_topic);
   myESP.setMQTTCallback(callback);
   myESP.begin();
@@ -337,5 +339,15 @@ void loop() {
   yield();
 }
 void callback(char* topic, uint8_t* payload, unsigned int length) {
-  //put mqtt callback code here
+  char msg[length+1];
+  for (int i = 0; i < length; i++) {
+    msg[i] = (char)payload[i];
+  }
+  msg[length] = '\0';
+  if(strcmp(topic, reset_topic) == 0) {
+    if(strcmp(msg, "1") == 0){
+      myESP.publish(reset_topic, "0", true);
+      ESP.restart();
+    }
+  }
 }
