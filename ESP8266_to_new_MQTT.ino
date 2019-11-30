@@ -12,7 +12,8 @@ const char* ssid = "Matrix";
 const char* wifi_password = "rhjk0096#Matrix";
 const char* mqtt_server = "192.168.0.98";
 
-char* reset_topic = "tgn/system/reboot/esp1";
+const char* radar_topic = "tgn/system/radar"; 
+const char* reset_topic = "tgn/system/reboot/esp1";
 const char* temp_topic = "tgn/esp_1/temp/sensor_1";
 const char* hum_topic = "tgn/esp_1/temp/sensor_2";
 const char* b1_topic = "tgn/esp_1/button/b1";
@@ -23,11 +24,12 @@ const char* con_topic = "tgn/esp_1/connection/ip";
 const char* update_topic = "tgn/esp_1/update";
 char* color_topic = "tgn/esp_3/neopixel/color";
 char* br_topic = "tgn/esp_3/neopixel/brightness";
-const char* clientID = "NodeMCU_1 V3.3";
+const char* clientID = "NodeMCU_1 V3.4";
 const int DHTPin = D4;
 const int ButtonPin = D7;
 const int DisplayPin = D8;
 const int inLED = D0;
+const int RadarPin = D6;
 char* b1 = "off";
 static char celsiusTemp[7];
 static char fahrenheitTemp[7];
@@ -36,6 +38,8 @@ int switchState = 0;
 int switchStateB = 0;
 int screen = 0;
 int neopixel = 1;
+int radarState = 0;
+int radarRead = 0;
 
 netInfo homeNet = {  .mqttHost = mqtt_server,
           .mqttUser = "",
@@ -182,6 +186,7 @@ void setup() {
   display.clear();
   pinMode(inLED, OUTPUT);
   pinMode(ButtonPin, INPUT);
+  pinMode(RadarPin, INPUT);
   pinMode(DisplayPin, INPUT);
   Serial.begin(9600);
   delay(10);
@@ -215,6 +220,19 @@ void loop() {
   myESP.loop();
   switchState = digitalRead(ButtonPin);
   switchStateB = digitalRead(DisplayPin);
+  radarState = digitalRead(RadarPin);
+  if (radarState == HIGH){
+    if (radarRead == 0){
+      radarRead = 1;
+      myESP.publish(radar_topic, "1", true);
+    }
+  }
+  else {
+    if (radarRead == 1){
+      radarRead = 0;
+      myESP.publish(radar_topic, "0", true);
+    }
+  }
   float h = dht2.readHumidity();
   float t = dht2.readTemperature();
   float f = dht2.readTemperature(true);

@@ -10,19 +10,23 @@ const char* ssid = "Matrix";
 const char* wifi_password = "rhjk0096#Matrix";
 const char* mqtt_server = "192.168.0.98";
 
-char* reset_topic = "tgn/system/reboot/esp3";
-char* color_topic = "tgn/esp_3/neopixel/color";
-char* br_topic = "tgn/esp_3/neopixel/brightness";
-char* mode_topic = "tgn/esp_3/neopixel/mode";
-char* set_topic = "tgn/esp_3/neopixel/setneo";
+const char* radar_topic = "tgn/system/radar"; 
+const char* reset_topic = "tgn/system/reboot/esp3";
+const char* color_topic = "tgn/esp_3/neopixel/color";
+const char* br_topic = "tgn/esp_3/neopixel/brightness";
+const char* mode_topic = "tgn/esp_3/neopixel/mode";
+const char* set_topic = "tgn/esp_3/neopixel/setneo";
 const char* con_topic = "tgn/esp_3/connection/ip";
 const char* update_topic = "tgn/esp_3/update";
-const char* clientID = "NodeMCU_3 V1.6";
+const char* clientID = "NodeMCU_3 V1.7";
 const int inLED = D0;
+const int RadarPin = D6;
 const int DisplayPin = D8;
 int inc_d = 0;
 int inc_e = 0;
 int screen = 0;
+int radarState = 0;
+int radarRead = 0;
 long lastMsg = 0;
 char msg[50];
 int value = 0;
@@ -180,6 +184,7 @@ void setup() {
   strip.show();
   pinMode(inLED, OUTPUT);
   pinMode(DisplayPin, INPUT);
+  pinMode(RadarPin, INPUT);
   Serial.begin(9600);
   Serial.println();
   Serial.print("Connecting to ");
@@ -422,6 +427,19 @@ void callback(char* topic, byte* payload, unsigned int length) {
 void loop() {
   myESP.loop();
   switchStateB = digitalRead(DisplayPin);
+  radarState = digitalRead(RadarPin);
+  if (radarState == HIGH){
+    if (radarRead == 0){
+      radarRead = 1;
+      myESP.publish(radar_topic, "1", true);
+    }
+  }
+  else {
+    if (radarRead == 1){
+      radarRead = 0;
+      myESP.publish(radar_topic, "0", true);
+    }
+  }
   if (switchStateB == HIGH){
     screen = 0;
     }
