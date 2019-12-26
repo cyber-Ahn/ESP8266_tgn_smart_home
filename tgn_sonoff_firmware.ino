@@ -1,20 +1,21 @@
 #include "ESPHelper.h"
 #include <Metro.h>
 
-const char* ssid = "your ssid";
-const char* wifi_password = "your wifi password";
-const char* mqtt_server = "your broker ip";
+const char* ssid = "Matrix";
+const char* wifi_password = "rhjk0096#Matrix";
+const char* mqtt_server = "192.168.0.98";
 String homecode = "10101";
-String modul = "1";
+String modul = "6";
 
 const int relay_pin = D6;
 const int led_pin = D7;
 const int button_pin = D3;
 
 char* data_topic = "tgn/sonoff/data";
+char* res_topic = "tgn/system/reboot/sonoff";
 const char* con_topic = "tgn/sonoff_1/connection/ip";
 const char* update_topic = "tgn/sonoff_1/update";
-const char* clientID = "sonoff_1 V0.1";
+const char* clientID = "sonoff_1 V0.2";
 int switchStateB = 0;
 int button_sw = 0;
 int relay_stat = 0;
@@ -41,6 +42,7 @@ void setup() {
   myESP.OTA_setPassword("sonoff1");
   myESP.OTA_setHostnameWithVersion(clientID);
   myESP.addSubscription(data_topic);
+  myESP.addSubscription(res_topic);
   myESP.addSubscription(update_topic);
   myESP.setMQTTCallback(callback);
   myESP.begin();
@@ -75,6 +77,12 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
   msg[length] = '\0';
   String data = msg;
+  if(strcmp(topic, res_topic) == 0) {
+    if(strcmp(msg, "1") == 0){
+      myESP.publish(res_topic, "0", true);
+      ESP.restart();
+    }
+  }
   if(strcmp(topic, data_topic) == 0) {
     Serial.print("New Data:");
     Serial.println(data);
