@@ -4,7 +4,7 @@
 const char* ssid = "name";
 const char* wifi_password = "pwd";
 const char* mqtt_server = "ip";
-String switchcode = "27110096";
+String switchcode = "123456";
 String switchnumber = "1";
 char* msg_out = "Open Door 1";
 
