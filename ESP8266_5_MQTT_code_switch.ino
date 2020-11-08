@@ -1,9 +1,9 @@
 #include "ESPHelper.h"
 #include <Metro.h>
 
-const char* ssid = "Matrix";
-const char* wifi_password = "rhjk0096#Matrix";
-const char* mqtt_server = "192.168.0.98";
+const char* ssid = "name";
+const char* wifi_password = "pwd";
+const char* mqtt_server = "ip";
 String switchcode = "27110096";
 String switchnumber = "1";
 char* msg_out = "Open Door 1";
