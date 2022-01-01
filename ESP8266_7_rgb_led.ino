@@ -4,9 +4,9 @@
 
 #define PIN D1
 
-const char* ssid = "Matrix";
-const char* wifi_password = "rhjk0096#Matrix";
-const char* mqtt_server = "192.168.0.98";
+const char* ssid = "name";
+const char* wifi_password = "pwd";
+const char* mqtt_server = "mqtt ip";
 
 const char* reset_topic = "tgn/system/reboot/esp4";
 const char* color_topic = "tgn/esp_3/neopixel/color";
