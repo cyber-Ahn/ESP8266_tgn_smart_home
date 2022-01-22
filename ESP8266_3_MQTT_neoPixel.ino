@@ -1,14 +1,14 @@
 #include <Adafruit_NeoPixel.h>
-#include "ESPHelper.h"
-#include <Metro.h>
+
 #include <Wire.h>
 #include "SSD1306Wire.h"
-
+#include <ESP8266WiFi.h>
+#include <PubSubClient.h>
 #define PIN D1
 
 const char* ssid = "name";
-const char* wifi_password = "pwd";
-const char* mqtt_server = "ip";
+const char* wifi_password = "password";
+const char* mqtt_server = "mqtt ip";
 
 const char* radar_topic = "tgn/system/radar"; 
 const char* reset_topic = "tgn/system/reboot/esp3";
@@ -17,7 +17,6 @@ const char* br_topic = "tgn/esp_3/neopixel/brightness";
 const char* mode_topic = "tgn/esp_3/neopixel/mode";
 const char* set_topic = "tgn/esp_3/neopixel/setneo";
 const char* con_topic = "tgn/esp_3/connection/ip";
-const char* update_topic = "tgn/esp_3/update";
 const char* clientID = "NodeMCU_3 V1.7";
 const int inLED = D0;
 const int RadarPin = D6;
@@ -35,16 +34,10 @@ String c_d = "";
 String b_d = "";
 String m_d = "";
 
-netInfo homeNet = {  .mqttHost = mqtt_server,
-          .mqttUser = "",
-          .mqttPass = "", 
-          .mqttPort = 1883,
-          .ssid = ssid, 
-          .pass = wifi_password};
 
-ESPHelper myESP(&homeNet);
+WiFiClient espClient;
+PubSubClient client(espClient);
 SSD1306Wire  display(0x3c, D3, D5);
-Metro publishTimer = Metro(30000);
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(60, PIN, NEO_GRB + NEO_KHZ800);
 
 #define WiFi_Logo_width 60
@@ -167,6 +160,18 @@ const uint8_t tgn_bits[] PROGMEM = {
   0xFF, 0xFF, 0xFF, 0xFF, };
  
 void setup() {
+  Serial.begin(9600);
+  Serial.println();
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+  setup_wifi();
+  Serial.println("WiFi connected");
+  Serial.print("IP address: ");
+  client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
+  Serial.println(WiFi.localIP());
+  Serial.println(WiFi.macAddress());
   display.init();
   display.flipScreenVertically();
   display.setContrast(100);
@@ -185,21 +190,6 @@ void setup() {
   pinMode(inLED, OUTPUT);
   pinMode(DisplayPin, INPUT);
   pinMode(RadarPin, INPUT);
-  Serial.begin(9600);
-  Serial.println();
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
-  myESP.OTA_enable();
-  myESP.OTA_setPassword("esp3");
-  myESP.OTA_setHostnameWithVersion(clientID);
-  myESP.addSubscription(color_topic);
-  myESP.addSubscription(br_topic);
-  myESP.addSubscription(mode_topic);
-  myESP.addSubscription(set_topic);
-  myESP.addSubscription(update_topic);
-  myESP.addSubscription(reset_topic);
-  myESP.setMQTTCallback(callback);
-  myESP.begin();
   display.setFont(ArialMT_Plain_16);
   display.drawString(0, 0, "Connecting to ");
   display.drawString(0, 16, ssid);
@@ -245,6 +235,16 @@ void setup() {
   delay(500);
   set_led("15_255.0.255.255_50");
   delay(500);
+}
+
+void setup_wifi() {
+    WiFi.begin(ssid, wifi_password);
+ 
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(100);
+    }
+    
+    Serial.println(WiFi.localIP());
 }
 
 void colorWipe(uint32_t c, uint8_t wait) {
@@ -339,6 +339,23 @@ void set_led(String data) {
   }
 }
 
+void reconnect(){
+  while (!client.connected()){
+    Serial.print("Reconnecting");
+    if(!client.connect("esp_7_rgb")){
+      Serial.print("faild, rc=");
+      Serial.print(client.state());
+      Serial.print("retrying in 5 s");
+      delay(5000);
+    }
+  }
+  client.subscribe(color_topic);
+  client.subscribe(reset_topic);
+  client.subscribe(br_topic);
+  client.subscribe(set_topic);
+  client.subscribe(mode_topic);
+}
+
 void callback(char* topic, byte* payload, unsigned int length) {
   digitalWrite(inLED,LOW); 
   inc_d = 0;
@@ -381,7 +398,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
   if(strcmp(topic, reset_topic) == 0) {
     if(strcmp(msg, "1") == 0){
-      myESP.publish(reset_topic, "0", true);
+      client.publish(reset_topic, "0", true);
       ESP.restart();
     }
   }
@@ -420,30 +437,32 @@ void callback(char* topic, byte* payload, unsigned int length) {
   if(inc_e == 1) {
     theaterChaseRainbow(50);
   }
-  delay(1000);
   digitalWrite(inLED,HIGH);
 }
  
 void loop() {
-  myESP.loop();
+  if (!client.connected()) {
+        reconnect();
+    }
+  client.loop();
+  
   switchStateB = digitalRead(DisplayPin);
   radarState = digitalRead(RadarPin);
   if (radarState == HIGH){
     if (radarRead == 0){
       radarRead = 1;
-      myESP.publish(radar_topic, "1", true);
+      client.publish(radar_topic, "1", true);
     }
   }
   else {
     if (radarRead == 1){
       radarRead = 0;
-      myESP.publish(radar_topic, "0", true);
+     client.publish(radar_topic, "0", true);
     }
   }
   if (switchStateB == HIGH){
     screen = 0;
     }
-  if(publishTimer.check()){
     char ip_out[50] = "";
     IPAddress ip_r = WiFi.localIP();
     byte first_octet = ip_r[0];
@@ -467,12 +486,10 @@ void loop() {
     strcat(ip_out,ip_d);
     display.clear();
     display.display();
-    delay(5000);
-    myESP.publish(con_topic, ip_out, true);
+    client.publish(con_topic, ip_out, true);
     Serial.println(ip_out);
     if (screen == 0) {
       display.setTextAlignment(TEXT_ALIGN_LEFT);
-      display.setFont(Dialog_bold_10);
       display.setContrast(255);
       display.drawString(0, 24, "Color:");
       display.drawString(32, 24, c_d);
@@ -493,6 +510,5 @@ void loop() {
     else if (screen == 2) {
       display.clear();
     }
-  }
-  yield();
+    delay(500);
 }
