@@ -1,19 +1,19 @@
 #include <Adafruit_NeoPixel.h>
-#include "ESPHelper.h"
-#include <Metro.h>
+#include <ESP8266WiFi.h>
+#include <PubSubClient.h>
 
 #define PIN D1
 
 const char* ssid = "name";
 const char* wifi_password = "pwd";
-const char* mqtt_server = "192.168.0.98";
+const char* mqtt_server = "mqtt ip";
 
 const char* color_topic = "tgn/esp_4/color";
 const char* br_topic = "tgn/esp_4/brightness";
 const char* time_topic = "tgn/system/time";
 const char* con_topic = "tgn/esp_4/ip";
 const char* update_topic = "tgn/esp_4/update";
-const char* clientID = "NodeMCU_3 V1.7";
+String clientID = "NodeMCU_3 V1.7";
 const int inLED = D0;
 String c_d = "";
 String b_d = "10";
@@ -25,15 +25,8 @@ int hour = 5;
 int mi = 43;
 String cl = "on";
 
-netInfo homeNet = {  .mqttHost = mqtt_server,
-          .mqttUser = "",
-          .mqttPass = "", 
-          .mqttPort = 1883,
-          .ssid = ssid, 
-          .pass = wifi_password};
-
-ESPHelper myESP(&homeNet);
-Metro publishTimer = Metro(30000);
+WiFiClient espClient;
+PubSubClient client(espClient);
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(60, PIN, NEO_GRB + NEO_KHZ800);
  
 void setup() {
@@ -45,17 +38,11 @@ void setup() {
   Serial.println();
   Serial.print("Connecting to ");
   Serial.println(ssid);
-  myESP.OTA_enable();
-  myESP.OTA_setPassword("esp4");
-  myESP.OTA_setHostnameWithVersion(clientID);
-  myESP.addSubscription(color_topic);
-  myESP.addSubscription(br_topic);
-  myESP.addSubscription(time_topic);
-  myESP.addSubscription(update_topic);
-  myESP.setMQTTCallback(callback);
-  myESP.begin();
+  setup_wifi();
   Serial.println("WiFi connected");
   Serial.print("IP address: ");
+  client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
   Serial.println(WiFi.localIP());
   Serial.println(WiFi.macAddress());
   colorWipe(strip.Color(255, 255, 255), 15);
@@ -69,6 +56,28 @@ void setup() {
   colorWipe(strip.Color(0, 0, 255), 10);
   delay(500);
   ini_layout(0);
+}
+
+void setup_wifi() {
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, wifi_password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(100);
+  }
+  Serial.println(WiFi.localIP());
+}
+
+void reconnect(){
+  while (!client.connected()){
+  Serial.println("Reconnecting");
+  clientID += String(random(0xffff), HEX);
+  if(!client.connect(clientID.c_str())){
+    Serial.print("faild, rc=");
+    Serial.print(client.state());
+    Serial.print("retrying in 5 s");
+    delay(5000);
+    }
+  }
 }
 
 void ini_layout(uint8_t mod) {
@@ -224,8 +233,10 @@ void callback(char* topic, byte* payload, unsigned int length) {
 }
  
 void loop() {
-  myESP.loop();
-  if(publishTimer.check()){
+  if (!client.connected()) {
+        reconnect();
+    }
+  client.loop();
     char ip_out[50] = "";
     IPAddress ip_r = WiFi.localIP();
     byte first_octet = ip_r[0];
@@ -247,9 +258,7 @@ void loop() {
     strcat(ip_out,ip_c);
     strcat(ip_out,".");
     strcat(ip_out,ip_d);
-    delay(5000);
-    myESP.publish(con_topic, ip_out, true);
+    client.publish(con_topic, ip_out, true);
     Serial.println(ip_out);
-  }
-  yield();
+    delay(5000);
 }

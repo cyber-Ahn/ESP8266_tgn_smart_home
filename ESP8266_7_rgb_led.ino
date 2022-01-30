@@ -13,7 +13,7 @@ const char* color_topic = "tgn/esp_3/neopixel/color";
 const char* br_topic = "tgn/esp_3/neopixel/brightness";
 const char* set_topic = "tgn/esp_3/neopixel/setneo";
 const char* con_topic = "tgn/esp_4/ip";
-const char* clientID = "NodeMCU_4 V1.7";
+String clientID = "NodeMCU_4 V1.7";
 const int inLED = D0;
 long lastMsg = 0;
 char msg[50];
@@ -54,13 +54,29 @@ void setup() {
 }
 
 void setup_wifi() {
-    WiFi.begin(ssid, wifi_password);
- 
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(100);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, wifi_password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(100);
+  }
+  Serial.println(WiFi.localIP());
+}
+
+void reconnect(){
+  while (!client.connected()){
+  Serial.println("Reconnecting");
+  clientID += String(random(0xffff), HEX);
+  if(!client.connect(clientID.c_str())){
+    Serial.print("faild, rc=");
+    Serial.print(client.state());
+    Serial.print("retrying in 5 s");
+    delay(5000);
     }
-    
-    Serial.println(WiFi.localIP());
+  }
+  client.subscribe(color_topic);
+  client.subscribe(reset_topic);
+  client.subscribe(br_topic);
+  client.subscribe(set_topic);
 }
 
 void colorWipe(uint32_t c, uint8_t wait) {
@@ -129,22 +145,6 @@ void set_led(String data) {
   }
 }
 
-void reconnect(){
-  while (!client.connected()){
-    Serial.print("Reconnecting");
-    if(!client.connect("esp_7_rgb")){
-      Serial.print("faild, rc=");
-      Serial.print(client.state());
-      Serial.print("retrying in 5 s");
-      delay(5000);
-    }
-  }
-  client.subscribe(color_topic);
-  client.subscribe(reset_topic);
-  client.subscribe(br_topic);
-  client.subscribe(set_topic);
-}
-
 void callback(char* topic, byte* payload, unsigned int length) {
   digitalWrite(inLED,LOW); 
   char msg[length+1];
@@ -186,7 +186,6 @@ void callback(char* topic, byte* payload, unsigned int length) {
       ESP.restart();
     }
   }
-  delay(1000);
   digitalWrite(inLED,HIGH);
 }
 
@@ -220,5 +219,5 @@ void loop() {
    strcat(ip_out,ip_d);
    Serial.println(ip_out);
    client.publish(con_topic, ip_out, true);
-   delay(5000);
+   delay(1000);
 }

@@ -16,7 +16,6 @@ const char* ssid = "name";
 const char* wifi_password = "pwd";
 const char* mqtt_server = "mqtt ip";
 
-
 const char* color3_topic = "tgn/esp_3/neopixel/color";
 const char* br_topic = "tgn/esp_3/neopixel/brightness";
 const char* ctemp_topic = "tgn/esp_8/ctemp";
@@ -24,7 +23,7 @@ const char* color_topic = "tgn/esp_8/color";
 const char* lux_topic = "tgn/esp_8/lux";
 const char* con_topic = "tgn/esp_8/connection/ip";
 const char* reset_topic = "tgn/system/reboot/esp4";
-const char* clientID = "NodeMCU_4 V1.7";
+String clientID = "NodeMCU_8 V1.7";
 
 TCS34725 tcs;
 WiFiClient espClient;
@@ -53,23 +52,23 @@ void setup(void)
 }
 
 void setup_wifi() {
-    WiFi.begin(ssid, wifi_password);
- 
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(100);
-    }
-    
-    Serial.println(WiFi.localIP());
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, wifi_password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(100);
+  }
+  Serial.println(WiFi.localIP());
 }
 
 void reconnect(){
   while (!client.connected()){
-    Serial.println("Reconnecting");
-    if(!client.connect("esp_7_rgb")){
-      Serial.print("faild, rc=");
-      Serial.print(client.state());
-      Serial.print("retrying in 5 s");
-      delay(5000);
+  Serial.println("Reconnecting");
+  clientID += String(random(0xffff), HEX);
+  if(!client.connect(clientID.c_str())){
+    Serial.print("faild, rc=");
+    Serial.print(client.state());
+    Serial.print("retrying in 5 s");
+    delay(5000);
     }
   }
   client.subscribe(reset_topic);
@@ -157,5 +156,5 @@ void loop(void)
       client.publish(br_topic, "150", true);
       client.publish(color3_topic, ccs, true);
     }
-    delay(9000);
+    delay(5000);
 }

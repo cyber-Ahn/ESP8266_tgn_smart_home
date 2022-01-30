@@ -1,43 +1,45 @@
-#include <Adafruit_NeoPixel.h>
-#include <Wire.h>
-#include "SSD1306Wire.h"
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
-#define PIN D1
+#include <Wire.h>
+#include "SSD1306Wire.h"
 
 const char* ssid = "name";
 const char* wifi_password = "pwd";
 const char* mqtt_server = "mqtt ip";
 
-const char* radar_topic = "tgn/system/radar"; 
-const char* reset_topic = "tgn/system/reboot/esp3";
-const char* color_topic = "tgn/esp_3/neopixel/color";
-const char* br_topic = "tgn/esp_3/neopixel/brightness";
-const char* mode_topic = "tgn/esp_3/neopixel/mode";
-const char* set_topic = "tgn/esp_3/neopixel/setneo";
-const char* con_topic = "tgn/esp_3/connection/ip";
-String clientID = "NodeMCU_3 V1.7";
+const char* esp1_ip_tp = "tgn/esp_1/connection/ip";
+const char* esp1_temp_tp = "tgn/esp_1/temp/sensor_1";
+const char* esp1_hum_tp = "tgn/esp_1/temp/sensor_2";
+const char* esp1_lis_tp = "tgn/esp_1/analog/sensor_1";
+const char* esp2_ip_tp = "tgn/esp_2/connection/ip";
+const char* esp2_temp_tp = "tgn/esp_2/temp/sensor_1";
+const char* esp2_hum_tp = "tgn/esp_2/temp/sensor_2";
+const char* esp2_lis_tp = "tgn/esp_2/analog/sensor_1";
+const char* esp3_ip_tp = "tgn/esp_3/connection/ip";
+const char* esp3_mode_tp = "tgn/esp_3/neopixel/mode";
+const char* esp3_br_tp = "tgn/esp_3/neopixel/brightness";
+const char* esp3_col_tp = "tgn/esp_3/neopixel/color";
+const char* con_topic = "tgn/esp_4/connection/ip";
+const char* update_topic = "tgn/esp_4/update";
+String clientID = "NodeMCU_4 V0.2";
 const int inLED = D0;
-const int RadarPin = D6;
-const int DisplayPin = D8;
-int inc_d = 0;
-int inc_e = 0;
 int screen = 0;
-int radarState = 0;
-int radarRead = 0;
-long lastMsg = 0;
-char msg[50];
-int value = 0;
-int switchStateB = 0;
-String c_d = "";
-String b_d = "";
-String m_d = "";
-
+String esp1_ip = "---.---.---.---";
+String esp1_temp = "00";
+String esp1_hum = "00";
+String esp1_lis = "--";
+String esp2_ip = "---.---.---.---";
+String esp2_temp = "00";
+String esp2_hum = "00";
+String esp2_lis = "--";
+String esp3_ip = "---.---.---.---";
+String esp3_mode = "empty";
+String esp3_br = "00";
+String esp3_col = "0.0.0.0";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
 SSD1306Wire  display(0x3c, D3, D5);
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(60, PIN, NEO_GRB + NEO_KHZ800);
 
 #define WiFi_Logo_width 60
 #define WiFi_Logo_height 36
@@ -161,7 +163,6 @@ const uint8_t tgn_bits[] PROGMEM = {
 void setup() {
   Serial.begin(9600);
   Serial.println();
-  Serial.println();
   Serial.print("Connecting to ");
   Serial.println(ssid);
   setup_wifi();
@@ -169,8 +170,6 @@ void setup() {
   Serial.print("IP address: ");
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
-  Serial.println(WiFi.localIP());
-  Serial.println(WiFi.macAddress());
   display.init();
   display.flipScreenVertically();
   display.setContrast(100);
@@ -183,12 +182,7 @@ void setup() {
   delay(5000);
   display.clear();
   display.display();
-  strip.begin();
-  strip.setBrightness(10);
-  strip.show();
   pinMode(inLED, OUTPUT);
-  pinMode(DisplayPin, INPUT);
-  pinMode(RadarPin, INPUT);
   display.setFont(ArialMT_Plain_16);
   display.drawString(0, 0, "Connecting to ");
   display.drawString(0, 16, ssid);
@@ -202,38 +196,6 @@ void setup() {
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
   Serial.println(WiFi.macAddress());
-  set_led("0_255.0.0.255_50");
-  delay(500);
-  set_led("4_255.0.0.255_50");
-  delay(500);
-  set_led("8_255.0.0.255_50");
-  delay(500);
-  set_led("12_255.0.0.255_50");
-  delay(500);
-  set_led("1_0.255.0.255_50");
-  delay(500);
-  set_led("5_0.255.0.255_50");
-  delay(500);
-  set_led("9_0.255.0.255_50");
-  delay(500);
-  set_led("13_0.255.0.255_50");
-  delay(500);
-  set_led("2_0.0.255.255_50");
-  delay(500);
-  set_led("6_0.0.255.255_50");
-  delay(500);
-  set_led("10_0.0.255.255_50");
-  delay(500);
-  set_led("14_0.0.255.255_50");
-  delay(500);
-  set_led("3_255.0.255.255_50");
-  delay(500);
-  set_led("7_255.0.255.255_50");
-  delay(500);
-  set_led("11_255.0.255.255_50");
-  delay(500);
-  set_led("15_255.0.255.255_50");
-  delay(500);
 }
 
 void setup_wifi() {
@@ -256,186 +218,55 @@ void reconnect(){
     delay(5000);
     }
   }
-  client.subscribe(color_topic);
-  client.subscribe(reset_topic);
-  client.subscribe(br_topic);
-  client.subscribe(set_topic);
-  client.subscribe(mode_topic);
-}
-
-void colorWipe(uint32_t c, uint8_t wait) {
-  for(uint16_t i=0; i<strip.numPixels(); i++) {
-    strip.setPixelColor(i, c);
-    strip.show();
-    delay(wait);
-  }
-}
-
-String getValue(String data, char separator, int index)
-{
-    int found = 0;
-    int strIndex[] = { 0, -1 };
-    int maxIndex = data.length() - 1;
-    for (int i = 0; i <= maxIndex && found <= index; i++) {
-        if (data.charAt(i) == separator || i == maxIndex) {
-            found++;
-            strIndex[0] = strIndex[1] + 1;
-            strIndex[1] = (i == maxIndex) ? i+1 : i;
-        }
-    }
-    return found > index ? data.substring(strIndex[0], strIndex[1]) : "";
-}
-
-uint32_t Wheel(byte WheelPos) {
-  WheelPos = 255 - WheelPos;
-  if(WheelPos < 85) {
-    return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
-  }
-  if(WheelPos < 170) {
-    WheelPos -= 85;
-    return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
-  }
-  WheelPos -= 170;
-  return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
-}
-
-void rainbowCycle(uint8_t wait) {
-  uint16_t i, j;
-  for(j=0; j<256; j++) {
-    for(i=0; i<strip.numPixels(); i++) {
-      strip.setPixelColor(i, Wheel((i+j) & 255));
-    }
-    strip.show();
-    delay(wait);
-  }
-}
-
-void theaterChaseRainbow(uint8_t wait) {
-  for (int j=0; j < 256; j++) {
-    for (int q=0; q < 3; q++) {
-      for (uint16_t i=0; i < strip.numPixels(); i=i+3) {
-        strip.setPixelColor(i+q, Wheel( (i+j) % 255));
-      }
-      strip.show();
-      delay(wait);
-      for (uint16_t i=0; i < strip.numPixels(); i=i+3) {
-        strip.setPixelColor(i+q, 0);
-      }
-    }
-  }
-}
-
-void set_led(String data) {
-  if (data != "nothing"){
-    int num = atoi(getValue(data, '_', 0).c_str());
-    String col = getValue(data, '_', 1);
-    int br = atoi(getValue(data, '_', 2).c_str());
-    int r = atoi(getValue(col, '.', 0).c_str());
-    int g = atoi(getValue(col, '.', 1).c_str());
-    int b = atoi(getValue(col, '.', 2).c_str());
-    Serial.print("Set LED: ");
-    Serial.print(num);
-    Serial.println();
-    strip.setBrightness(br);
-    strip.show();
-    Serial.print("Brightness: ");
-    Serial.print(br);
-    Serial.println();
-    delay(50);
-    strip.setPixelColor(num, strip.Color(r, g, b, br));
-    strip.show();
-    Serial.print("Color: ");
-    Serial.print(r);
-    Serial.print(", ");
-    Serial.print(g);
-    Serial.print(", ");
-    Serial.print(b);
-    Serial.println();
-    delay(50);
-  }
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
   digitalWrite(inLED,LOW); 
-  inc_d = 0;
-  inc_e = 0;
+  
   char msg[length+1];
   for (int i = 0; i < length; i++) {
     msg[i] = (char)payload[i];
   }
   msg[length] = '\0';
   String data = msg;
-  if(strcmp(topic, color_topic) == 0) {
-    inc_d = 0;
-    inc_e = 0;
-    int r = atoi(getValue(data, '.', 0).c_str());
-    int g = atoi(getValue(data, '.', 1).c_str());
-    int b = atoi(getValue(data, '.', 2).c_str());
-    colorWipe(strip.Color(r, g, b), 50);
-    Serial.print("Set Color: ");
-    Serial.print(r);
-    Serial.print(", ");
-    Serial.print(g);
-    Serial.print(", ");
-    Serial.print(b);
-    Serial.println();
-    c_d = data;
+  
+  if(strcmp(topic, esp1_ip_tp) == 0) {
+    esp1_ip = data;
   }
-  if(strcmp(topic, br_topic) == 0) {
-    inc_d = 0;
-    inc_e = 0;
-    int br = atoi(data.c_str());
-    strip.setBrightness(br);
-    strip.show();
-    Serial.print("Set Brightness: ");
-    Serial.print(br);
-    Serial.println();
-    b_d = data;
+  if(strcmp(topic, esp1_temp_tp) == 0) {
+    esp1_temp = data;
   }
-  if(strcmp(topic, set_topic) == 0) {
-    set_led(data);
+  if(strcmp(topic, esp1_hum_tp) == 0) {
+    esp1_hum = data;
   }
-  if(strcmp(topic, reset_topic) == 0) {
-    if(strcmp(msg, "1") == 0){
-      client.publish(reset_topic, "0", true);
-      ESP.restart();
-    }
+  if(strcmp(topic, esp1_lis_tp) == 0) {
+    esp1_lis = data;
   }
-  if(strcmp(topic, mode_topic) == 0) {
-    m_d = msg;
-    if(strcmp(msg, "rainbow") == 0){
-       inc_d = 1;
-       inc_e = 0;
-       rainbowCycle(20);
-       Serial.print("Mode: Rainbow");
-       Serial.println();
-    }
-    else if(strcmp(msg, "theater") == 0){
-       inc_d = 0;
-       inc_e = 1;
-       theaterChaseRainbow(50);
-       Serial.print("Mode: Theater");
-       Serial.println();
-    }
-    else if(strcmp(msg, "normal") == 0){
-       inc_d = 0;
-       inc_e = 0;
-       Serial.print("Mode: Normal");
-       Serial.println();
-    }
-    else{
-       inc_d = 0;
-       inc_e = 0;
-       Serial.print("Mode: no Mode set");
-       Serial.println();
-    }
+  if(strcmp(topic, esp2_ip_tp) == 0) {
+    esp2_ip = data;
   }
-  if(inc_d == 1) {
-    rainbowCycle(20);
+  if(strcmp(topic, esp2_temp_tp) == 0) {
+    esp2_temp = data;
   }
-  if(inc_e == 1) {
-    theaterChaseRainbow(50);
+  if(strcmp(topic, esp2_hum_tp) == 0) {
+    esp2_hum = data;
   }
+  if(strcmp(topic, esp2_lis_tp) == 0) {
+    esp2_lis = data;
+  }
+  if(strcmp(topic, esp3_ip_tp) == 0) {
+    esp3_ip = data;
+  }
+  if(strcmp(topic, esp3_mode_tp) == 0) {
+    esp3_mode = data;
+  }
+  if(strcmp(topic, esp3_br_tp) == 0) {
+    esp3_br = data;
+  }
+  if(strcmp(topic, esp3_col_tp) == 0) {
+    esp3_col = data;
+  }
+  delay(1000);
   digitalWrite(inLED,HIGH);
 }
  
@@ -444,24 +275,6 @@ void loop() {
         reconnect();
     }
   client.loop();
-  
-  switchStateB = digitalRead(DisplayPin);
-  radarState = digitalRead(RadarPin);
-  if (radarState == HIGH){
-    if (radarRead == 0){
-      radarRead = 1;
-      client.publish(radar_topic, "1", true);
-    }
-  }
-  else {
-    if (radarRead == 1){
-      radarRead = 0;
-     client.publish(radar_topic, "0", true);
-    }
-  }
-  if (switchStateB == HIGH){
-    screen = 0;
-    }
     char ip_out[50] = "";
     IPAddress ip_r = WiFi.localIP();
     byte first_octet = ip_r[0];
@@ -485,29 +298,86 @@ void loop() {
     strcat(ip_out,ip_d);
     display.clear();
     display.display();
+    delay(5000);
     client.publish(con_topic, ip_out, true);
     Serial.println(ip_out);
     if (screen == 0) {
       display.setTextAlignment(TEXT_ALIGN_LEFT);
       display.setContrast(255);
-      display.drawString(0, 24, "Color:");
-      display.drawString(32, 24, c_d);
-      display.drawString(0, 12, "Brightness:");
-      display.drawString(70, 12, b_d);
-      display.drawString(0, 0, "Mode:");
-      display.drawString(70, 0, m_d);
-      display.drawString(0, 48, "IP:");
-      display.drawString(20, 48, ip_out);
+      display.drawString(0, 0, "NodeMCU 1 IP:");
+      display.drawString(0, 12, esp1_ip);
+      display.drawString(0, 24, "TEMP:          °C");
+      display.drawString(35, 24, esp1_temp);
+      display.drawString(0, 36, "HUMI:           %");
+      display.drawString(35, 36, esp1_hum);
+      display.drawString(0, 48, "LIGH:");
+      display.drawString(35, 48, esp1_lis);
       display.display();
+      Serial.print("NodeMCU 1 IP: ");
+      Serial.print(esp1_ip);
+      Serial.println();
+      Serial.print("TEMP: ");
+      Serial.print(esp1_temp);
+      Serial.println();
+      Serial.print("HUMI: ");
+      Serial.print(esp1_hum);
+      Serial.println();
+      Serial.print("LIGH: ");
+      Serial.print(esp1_lis);
+      Serial.println();
       screen = 1;
     }
     else if (screen == 1) {
-      display.drawXbm(0, 0, tgn_width, tgn_height, tgn_bits);
+      display.setTextAlignment(TEXT_ALIGN_LEFT);
+      display.setContrast(255);
+      display.drawString(0, 0, "NodeMCU 2 IP:");
+      display.drawString(0, 12, esp2_ip);
+      display.drawString(0, 24, "TEMP:          °C");
+      display.drawString(35, 24, esp2_temp);
+      display.drawString(0, 36, "HUMI:           %");
+      display.drawString(35, 36, esp2_hum);
+      display.drawString(0, 48, "LIGH:");
+      display.drawString(35, 48, esp2_lis);
       display.display();
+      Serial.print("NodeMCU 2 IP: ");
+      Serial.print(esp2_ip);
+      Serial.println();
+      Serial.print("TEMP: ");
+      Serial.print(esp2_temp);
+      Serial.println();
+      Serial.print("HUMI: ");
+      Serial.print(esp2_hum);
+      Serial.println();
+      Serial.print("LIGH: ");
+      Serial.print(esp2_lis);
+      Serial.println();
       screen = 2;
     }
     else if (screen == 2) {
-      display.clear();
+      display.setTextAlignment(TEXT_ALIGN_LEFT);
+      display.setContrast(255);
+      display.drawString(0, 0, "NodeMCU 3 IP:");
+      display.drawString(0, 12, esp3_ip);
+      display.drawString(0, 24, "Color:");
+      display.drawString(32, 24, esp3_col);
+      display.drawString(0, 36, "Brightness:");
+      display.drawString(65, 36, esp3_br);
+      display.drawString(0, 48, "Mode:");
+      display.drawString(35, 48, esp3_mode);
+      display.display();
+      Serial.print("NodeMCU 3 IP: ");
+      Serial.print(esp3_ip);
+      Serial.println();
+      Serial.print("Color:");
+      Serial.print(esp3_col);
+      Serial.println();
+      Serial.print("Brightness:");
+      Serial.print(esp3_br);
+      Serial.println();
+      Serial.print("Mode:");
+      Serial.print(esp3_mode);
+      Serial.println();
+      screen = 0;
     }
-    delay(1000);
+    delay(5000);
 }

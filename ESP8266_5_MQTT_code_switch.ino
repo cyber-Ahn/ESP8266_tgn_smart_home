@@ -1,10 +1,10 @@
-#include "ESPHelper.h"
-#include <Metro.h>
+#include <ESP8266WiFi.h>
+#include <PubSubClient.h>
 
 const char* ssid = "name";
 const char* wifi_password = "pwd";
-const char* mqtt_server = "ip";
-String switchcode = "123456";
+const char* mqtt_server = "mqtt ip";
+String switchcode = "27110096";
 String switchnumber = "1";
 char* msg_out = "Open Door 1";
 
@@ -15,41 +15,53 @@ char* data_topic = "tgn/codeswitch/data";
 char* msg_topic = "tgn/codeswitch/msg";
 char* res_topic = "tgn/system/reboot/sonoff";
 const char* con_topic = "tgn/codeswitch/connection/ip_1/";
-const char* clientID = "codeswitch_1 V0.2 ";
+String clientID = "codeswitch_1 V0.2 ";
 int switchStateB = 0;
 int relay_stat = 0;
 
-netInfo homeNet = {  .mqttHost = mqtt_server,
-          .mqttUser = "",
-          .mqttPass = "", 
-          .mqttPort = 1883,
-          .ssid = ssid, 
-          .pass = wifi_password};
-
-ESPHelper myESP(&homeNet);
-Metro publishTimer = Metro(30000);
+WiFiClient espClient;
+PubSubClient client(espClient);
 
 void setup() {
+  digitalWrite(led_pin,HIGH);
   pinMode(relay_pin, OUTPUT);
   pinMode(led_pin, OUTPUT);
   Serial.begin(9600);
   Serial.println();
   Serial.print("Connecting to ");
   Serial.println(ssid);
-  myESP.OTA_enable();
-  myESP.OTA_setPassword("switch1");
-  myESP.OTA_setHostnameWithVersion(clientID);
-  myESP.addSubscription(data_topic);
-  myESP.addSubscription(res_topic);
-  myESP.setMQTTCallback(callback);
-  myESP.begin();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+  setup_wifi();
   Serial.println("WiFi connected");
   Serial.print("IP address: ");
+  client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
   Serial.println(WiFi.localIP());
-  Serial.println(WiFi.macAddress());
-  digitalWrite(led_pin,HIGH);
-  delay(5000);
+  Serial.println(WiFi.macAddress());  
   digitalWrite(led_pin,LOW);
+}
+
+void setup_wifi() {
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, wifi_password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(100);
+  }
+  Serial.println(WiFi.localIP());
+}
+
+void reconnect(){
+  while (!client.connected()){
+  Serial.println("Reconnecting");
+  clientID += String(random(0xffff), HEX);
+  if(!client.connect(clientID.c_str())){
+    Serial.print("faild, rc=");
+    Serial.print(client.state());
+    Serial.print("retrying in 5 s");
+    delay(5000);
+    }
+  }
 }
 
 String getValue(String data, char separator, int index)
@@ -76,7 +88,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   String data = msg;
   if(strcmp(topic, res_topic) == 0) {
     if(strcmp(msg, "1") == 0){
-      myESP.publish(res_topic, "0", true);
+      client.publish(res_topic, "0", true);
       ESP.restart();
     }
   }
@@ -90,8 +102,8 @@ void callback(char* topic, byte* payload, unsigned int length) {
       digitalWrite(relay_pin,HIGH);
       digitalWrite(led_pin,HIGH);
       relay_stat = 1;
-      myESP.publish(data_topic, "0", true);
-      myESP.publish(msg_topic, msg_out, true);
+      client.publish(data_topic, "0", true);
+      client.publish(msg_topic, msg_out, true);
       delay(5000);
       Serial.println("OFF");
       digitalWrite(relay_pin,LOW);
@@ -102,8 +114,10 @@ void callback(char* topic, byte* payload, unsigned int length) {
 }
 
 void loop() {
-  myESP.loop();
-  if(publishTimer.check()){
+  if (!client.connected()) {
+        reconnect();
+    }
+  client.loop();
     char ip_out[50] = "";
     IPAddress ip_r = WiFi.localIP();
     byte first_octet = ip_r[0];
@@ -125,9 +139,7 @@ void loop() {
     strcat(ip_out,ip_c);
     strcat(ip_out,".");
     strcat(ip_out,ip_d);
-    delay(5000);
-    myESP.publish(con_topic, ip_out, true);
+    client.publish(con_topic, ip_out, true);
     Serial.println(ip_out);
-  }
-  yield();
+    delay(5000);
 }

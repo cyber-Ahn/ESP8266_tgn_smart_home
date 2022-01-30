@@ -1,8 +1,7 @@
-#include "ESPHelper.h"
-#include <Metro.h>
+#include <ESP8266WiFi.h>
+#include <PubSubClient.h>
 #include <Wire.h>
 #include "SSD1306Wire.h"
-#include <ESP8266WiFi.h>
 #include "DHT.h"
 
 #define DHTTYPE DHT22
@@ -10,7 +9,7 @@
 
 const char* ssid = "name";
 const char* wifi_password = "pwd";
-const char* mqtt_server = "ip";
+const char* mqtt_server = "mqtt ip";
 
 const char* radar_topic = "tgn/system/radar"; 
 const char* reset_topic = "tgn/system/reboot/esp2";
@@ -22,7 +21,7 @@ const char* wifi2_topic = "tgn/esp_2/wifi/rssi";
 const char* light_topic = "tgn/esp_2/analog/sensor_1";
 const char* con_topic = "tgn/esp_2/connection/ip";
 const char* update_topic = "tgn/esp_2/update";
-const char* clientID = "NodeMCU_2 V1.3";
+String clientID = "NodeMCU_2 V1.3";
 const int DHTPin = D4;
 const int ButtonPin = D7;
 const int DisplayPin = D8;
@@ -38,15 +37,8 @@ int screen = 0;
 int radarState = 0;
 int radarRead = 0;
 
-netInfo homeNet = {  .mqttHost = mqtt_server,
-          .mqttUser = "",
-          .mqttPass = "",
-          .mqttPort = 1883,
-          .ssid = ssid, 
-          .pass = wifi_password};
-
-ESPHelper myESP(&homeNet);
-Metro publishTimer = Metro(30000);
+WiFiClient espClient;
+PubSubClient client(espClient);
 DHT dht2(DHTPin, DHTTYPE);
 SSD1306Wire  display(0x3c, D3, D5);
 
@@ -170,6 +162,16 @@ const uint8_t tgn_bits[] PROGMEM = {
   0xFF, 0xFF, 0xFF, 0xFF, };
 
 void setup() {
+  Serial.begin(9600);
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+  setup_wifi();
+  Serial.println("WiFi connected");
+  Serial.print("IP address: ");
+  client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
+  Serial.println(WiFi.localIP());
+  Serial.println(WiFi.macAddress());
   display.init();
   display.flipScreenVertically();
   display.setContrast(100);
@@ -184,7 +186,6 @@ void setup() {
   pinMode(inLED, OUTPUT);
   pinMode(ButtonPin, INPUT);
   pinMode(RadarPin, INPUT);
-  Serial.begin(9600);
   delay(10);
   dht2.begin();
   Serial.println();
@@ -194,37 +195,63 @@ void setup() {
   display.drawString(0, 32, "Brocker IP:");
   display.drawString(0, 48, mqtt_server);
   display.display();
-  delay(5000);
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
-  myESP.OTA_enable();
-  myESP.OTA_setPassword("esp2");
-  myESP.OTA_setHostnameWithVersion(clientID);
-  myESP.addSubscription(reset_topic);
-  myESP.addSubscription(update_topic);
-  myESP.setMQTTCallback(callback);
-  myESP.begin();
-  Serial.println("WiFi connected");
-  Serial.print("IP address: ");
+}
+
+void setup_wifi() {
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, wifi_password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(100);
+  }
   Serial.println(WiFi.localIP());
-  Serial.println(WiFi.macAddress());
+}
+
+void reconnect(){
+  while (!client.connected()){
+  Serial.println("Reconnecting");
+  clientID += String(random(0xffff), HEX);
+  if(!client.connect(clientID.c_str())){
+    Serial.print("faild, rc=");
+    Serial.print(client.state());
+    Serial.print("retrying in 5 s");
+    delay(5000);
+    }
+  }
+  client.subscribe(reset_topic);
+}
+
+void callback(char* topic, uint8_t* payload, unsigned int length) {
+  char msg[length+1];
+  for (int i = 0; i < length; i++) {
+    msg[i] = (char)payload[i];
+  }
+  msg[length] = '\0';
+  if(strcmp(topic, reset_topic) == 0) {
+    if(strcmp(msg, "1") == 0){
+      client.publish(reset_topic, "0", true);
+      ESP.restart();
+    }
+  }
 }
 
 void loop() {
-  myESP.loop();
+  if (!client.connected()) {
+        reconnect();
+    }
+  client.loop();
   switchState = digitalRead(ButtonPin);
   switchStateB = digitalRead(DisplayPin);
   radarState = digitalRead(RadarPin);
   if (radarState == HIGH){
     if (radarRead == 0){
       radarRead = 1;
-      myESP.publish(radar_topic, "1", true);
+      client.publish(radar_topic, "1", true);
     }
   }
   else {
     if (radarRead == 1){
       radarRead = 0;
-      myESP.publish(radar_topic, "0", true);
+      client.publish(radar_topic, "0", true);
     }
   }
   float h = dht2.readHumidity();
@@ -307,13 +334,11 @@ void loop() {
   strcat(ip_out,ip_c);
   strcat(ip_out,".");
   strcat(ip_out,ip_d);
-  if(publishTimer.check()){
     digitalWrite(inLED,LOW);
     display.clear();
     display.display();
     if (screen == 0) {
       display.setTextAlignment(TEXT_ALIGN_LEFT);
-      display.setFont(Dialog_bold_10);
       display.setContrast(255);
       display.drawString(0, 0, "WIFI:           %");
       display.drawString(31, 0, prc_out);
@@ -336,36 +361,21 @@ void loop() {
     else if (screen == 2) {
       display.clear();
     }
-    delay(5000);
-    myESP.publish(temp_topic, celsiusTemp, true);
+    client.publish(temp_topic, celsiusTemp, true);
     Serial.println(celsiusTemp);
-    myESP.publish(hum_topic, humidityTemp, true);
+    client.publish(hum_topic, humidityTemp, true);
     Serial.println(humidityTemp);
-    myESP.publish(b1_topic, b1, true);
+    client.publish(b1_topic, b1, true);
     Serial.println(b1);
-    myESP.publish(wifi1_topic, prc_out, true);
+    client.publish(wifi1_topic, prc_out, true);
     Serial.println(prc_out);
-    myESP.publish(wifi2_topic, rssi_x, true);
+    client.publish(wifi2_topic, rssi_x, true);
     Serial.println(rssi_x);
-    myESP.publish(light_topic, lis, true);
+    client.publish(light_topic, lis, true);
     Serial.println(lis);
-    myESP.publish(con_topic, ip_out, true);
+    client.publish(con_topic, ip_out, true);
     Serial.println(ip_out);
     digitalWrite(inLED,HIGH);
     Serial.println("---------------------------------------------------------");
-  }
-  yield();
-}
-void callback(char* topic, uint8_t* payload, unsigned int length) {
-  char msg[length+1];
-  for (int i = 0; i < length; i++) {
-    msg[i] = (char)payload[i];
-  }
-  msg[length] = '\0';
-  if(strcmp(topic, reset_topic) == 0) {
-    if(strcmp(msg, "1") == 0){
-      myESP.publish(reset_topic, "0", true);
-      ESP.restart();
-    }
-  }
+  delay(5000);
 }
