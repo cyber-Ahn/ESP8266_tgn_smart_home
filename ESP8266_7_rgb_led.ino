@@ -21,6 +21,7 @@ int value = 0;
 String c_d = "";
 String b_d = "";
 String m_d = "";
+int z = 0;
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -197,27 +198,32 @@ void loop() {
   client.loop();
   
   char ip_out[50] = "";
-   IPAddress ip_r = WiFi.localIP();
-   byte first_octet = ip_r[0];
-   byte second_octet = ip_r[1];
-   byte third_octet = ip_r[2];
-   byte fourth_octet = ip_r[3];
-   static char ip_a[7];
-   static char ip_b[7];
-   static char ip_c[7];
-   static char ip_d[7];
-   dtostrf(first_octet, 2, 0, ip_a);
-   dtostrf(second_octet, 2, 0, ip_b);
-   dtostrf(third_octet, 1, 0, ip_c);
-   dtostrf(fourth_octet, 2, 0, ip_d);
-   strcat(ip_out,ip_a);
-   strcat(ip_out,".");
-   strcat(ip_out,ip_b);
-   strcat(ip_out,".");
-   strcat(ip_out,ip_c);
-   strcat(ip_out,".");
-   strcat(ip_out,ip_d);
-   Serial.println(ip_out);
-   client.publish(con_topic, ip_out, true);
-   delay(1000);
+  IPAddress ip_r = WiFi.localIP();
+  byte first_octet = ip_r[0];
+  byte second_octet = ip_r[1];
+  byte third_octet = ip_r[2];
+  byte fourth_octet = ip_r[3];
+  static char ip_a[7];
+  static char ip_b[7];
+  static char ip_c[7];
+  static char ip_d[7];
+  dtostrf(first_octet, 2, 0, ip_a);
+  dtostrf(second_octet, 2, 0, ip_b);
+  dtostrf(third_octet, 1, 0, ip_c);
+  dtostrf(fourth_octet, 2, 0, ip_d);
+  strcat(ip_out,ip_a);
+  strcat(ip_out,".");
+  strcat(ip_out,ip_b);
+  strcat(ip_out,".");
+  strcat(ip_out,ip_c);
+  strcat(ip_out,".");
+  strcat(ip_out,ip_d);
+  Serial.println(ip_out);
+  client.publish(con_topic, ip_out, true);
+  delay(1000);
+  z = z + 1;
+  if (z == 3600){
+    Serial.println("reboot");
+    ESP.restart();
+  }
 }

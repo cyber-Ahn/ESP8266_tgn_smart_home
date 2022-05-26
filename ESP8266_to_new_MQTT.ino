@@ -39,6 +39,7 @@ int screen = 0;
 int neopixel = 1;
 int radarState = 0;
 int radarRead = 0;
+int z = 0;
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -339,68 +340,73 @@ void loop() {
   strcat(ip_out,ip_c);
   strcat(ip_out,".");
   strcat(ip_out,ip_d);
-    String data = lis;
-    int lis_c = atoi(data.c_str());
-    Serial.println(lis_c);
-    if(lis_c <= 20){
-      if(neopixel == 0){
-        client.publish(color_topic, "248.1.255.255", true);
-        client.publish(br_topic, "15", true);
-        neopixel = 1;
-        Serial.println("Neo ON");
-      }
+  String data = lis;
+  int lis_c = atoi(data.c_str());
+  Serial.println(lis_c);
+  if(lis_c <= 20){
+    if(neopixel == 0){
+      client.publish(color_topic, "248.1.255.255", true);
+      client.publish(br_topic, "15", true);
+      neopixel = 1;
+      Serial.println("Neo ON");
     }
-    if(lis_c >= 50){
-      if(neopixel == 1){
-        client.publish(br_topic, "10", true);
-        client.publish(color_topic, "0.0.0.255", true);
-        neopixel = 0;
-        Serial.println("Neo OFF");
-      }
+  }
+  if(lis_c >= 50){
+    if(neopixel == 1){
+      client.publish(br_topic, "10", true);
+      client.publish(color_topic, "0.0.0.255", true);
+      neopixel = 0;
+      Serial.println("Neo OFF");
     }
-    digitalWrite(inLED,LOW);
-    display.clear();
+  }
+  digitalWrite(inLED,LOW);
+  display.clear();
+  display.display();
+  if (screen == 0) {
+    display.setTextAlignment(TEXT_ALIGN_LEFT);
+    display.setContrast(255);
+    display.drawString(0, 0, "WIFI:           %");
+    display.drawString(31, 0, prc_out);
+    display.drawString(0, 12, "TEMP:          °C");
+    display.drawString(31, 12, celsiusTemp);
+    display.drawString(0, 24, "HUMI:           %");
+    display.drawString(31, 24, humidityTemp);
+    display.drawString(0, 36, "B1:");
+    display.drawString(31, 36, b1);
+    display.drawString(0, 48, "LIGH:");
+    display.drawString(31, 48, lis);
     display.display();
-    if (screen == 0) {
-      display.setTextAlignment(TEXT_ALIGN_LEFT);
-      display.setContrast(255);
-      display.drawString(0, 0, "WIFI:           %");
-      display.drawString(31, 0, prc_out);
-      display.drawString(0, 12, "TEMP:          °C");
-      display.drawString(31, 12, celsiusTemp);
-      display.drawString(0, 24, "HUMI:           %");
-      display.drawString(31, 24, humidityTemp);
-      display.drawString(0, 36, "B1:");
-      display.drawString(31, 36, b1);
-      display.drawString(0, 48, "LIGH:");
-      display.drawString(31, 48, lis);
-      display.display();
-      screen = 1;
-    }
-    else if (screen == 1) {
-      display.drawXbm(0, 0, tgn_width, tgn_height, tgn_bits);
-      display.display();
-      screen = 2;
-    }
-    else if (screen == 2) {
-      display.clear();
-    }
-    client.publish(temp_topic, celsiusTemp, true);
-    Serial.println(celsiusTemp);
-    client.publish(hum_topic, humidityTemp, true);
-    Serial.println(humidityTemp);
-    client.publish(b1_topic, b1, true);
-    Serial.println(b1);
-    client.publish(wifi1_topic, prc_out, true);
-    Serial.println(prc_out);
-    client.publish(wifi2_topic, rssi_x, true);
-    Serial.println(rssi_x);
-    client.publish(light_topic, lis, true);
-    Serial.println(lis);
-    client.publish(con_topic, ip_out, true);
-    Serial.println(ip_out);
-    Serial.println(screen);
-    digitalWrite(inLED,HIGH);
-    Serial.println("---------------------------------------------------------");
-    delay(5000);
+    screen = 1;
+  }
+  else if (screen == 1) {
+    display.drawXbm(0, 0, tgn_width, tgn_height, tgn_bits);
+    display.display();
+    screen = 2;
+  }
+  else if (screen == 2) {
+    display.clear();
+  }
+  client.publish(temp_topic, celsiusTemp, true);
+  Serial.println(celsiusTemp);
+  client.publish(hum_topic, humidityTemp, true);
+  Serial.println(humidityTemp);
+  client.publish(b1_topic, b1, true);
+  Serial.println(b1);
+  client.publish(wifi1_topic, prc_out, true);
+  Serial.println(prc_out);
+  client.publish(wifi2_topic, rssi_x, true);
+  Serial.println(rssi_x);
+  client.publish(light_topic, lis, true);
+  Serial.println(lis);
+  client.publish(con_topic, ip_out, true);
+  Serial.println(ip_out);
+  Serial.println(screen);
+  digitalWrite(inLED,HIGH);
+  Serial.println("---------------------------------------------------------");
+  delay(5000);
+  z = z + 1;
+  if (z == 720){
+    Serial.println("reboot");
+    ESP.restart();
+  }
 }

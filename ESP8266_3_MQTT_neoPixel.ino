@@ -32,7 +32,7 @@ int switchStateB = 0;
 String c_d = "";
 String b_d = "";
 String m_d = "";
-
+int z = 0;
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -461,53 +461,58 @@ void loop() {
   }
   if (switchStateB == HIGH){
     screen = 0;
-    }
-    char ip_out[50] = "";
-    IPAddress ip_r = WiFi.localIP();
-    byte first_octet = ip_r[0];
-    byte second_octet = ip_r[1];
-    byte third_octet = ip_r[2];
-    byte fourth_octet = ip_r[3];
-    static char ip_a[7];
-    static char ip_b[7];
-    static char ip_c[7];
-    static char ip_d[7];
-    dtostrf(first_octet, 2, 0, ip_a);
-    dtostrf(second_octet, 2, 0, ip_b);
-    dtostrf(third_octet, 1, 0, ip_c);
-    dtostrf(fourth_octet, 2, 0, ip_d);
-    strcat(ip_out,ip_a);
-    strcat(ip_out,".");
-    strcat(ip_out,ip_b);
-    strcat(ip_out,".");
-    strcat(ip_out,ip_c);
-    strcat(ip_out,".");
-    strcat(ip_out,ip_d);
-    display.clear();
+  }
+  char ip_out[50] = "";
+  IPAddress ip_r = WiFi.localIP();
+  byte first_octet = ip_r[0];
+  byte second_octet = ip_r[1];
+  byte third_octet = ip_r[2];
+  byte fourth_octet = ip_r[3];
+  static char ip_a[7];
+  static char ip_b[7];
+  static char ip_c[7];
+  static char ip_d[7];
+  dtostrf(first_octet, 2, 0, ip_a);
+  dtostrf(second_octet, 2, 0, ip_b);
+  dtostrf(third_octet, 1, 0, ip_c);
+  dtostrf(fourth_octet, 2, 0, ip_d);
+  strcat(ip_out,ip_a);
+  strcat(ip_out,".");
+  strcat(ip_out,ip_b);
+  strcat(ip_out,".");
+  strcat(ip_out,ip_c);
+  strcat(ip_out,".");
+  strcat(ip_out,ip_d);
+  display.clear();
+  display.display();
+  client.publish(con_topic, ip_out, true);
+  Serial.println(ip_out);
+  if (screen == 0) {
+    display.setTextAlignment(TEXT_ALIGN_LEFT);
+    display.setContrast(255);
+    display.drawString(0, 24, "Color:");
+    display.drawString(32, 24, c_d);
+    display.drawString(0, 12, "Brightness:");
+    display.drawString(70, 12, b_d);
+    display.drawString(0, 0, "Mode:");  
+    display.drawString(70, 0, m_d);
+    display.drawString(0, 48, "IP:");
+    display.drawString(20, 48, ip_out);
     display.display();
-    client.publish(con_topic, ip_out, true);
-    Serial.println(ip_out);
-    if (screen == 0) {
-      display.setTextAlignment(TEXT_ALIGN_LEFT);
-      display.setContrast(255);
-      display.drawString(0, 24, "Color:");
-      display.drawString(32, 24, c_d);
-      display.drawString(0, 12, "Brightness:");
-      display.drawString(70, 12, b_d);
-      display.drawString(0, 0, "Mode:");
-      display.drawString(70, 0, m_d);
-      display.drawString(0, 48, "IP:");
-      display.drawString(20, 48, ip_out);
-      display.display();
-      screen = 1;
-    }
-    else if (screen == 1) {
-      display.drawXbm(0, 0, tgn_width, tgn_height, tgn_bits);
-      display.display();
-      screen = 2;
-    }
-    else if (screen == 2) {
-      display.clear();
-    }
-    delay(1000);
+    screen = 1;
+  }
+  else if (screen == 1) {
+    display.drawXbm(0, 0, tgn_width, tgn_height, tgn_bits);
+    display.display();
+    screen = 2;
+  }
+  else if (screen == 2) {
+    display.clear();
+  }
+  delay(1000);
+  z = z + 1;
+  if (z == 3600){
+    Serial.println("reboot");
+    ESP.restart();
+  }
 }
