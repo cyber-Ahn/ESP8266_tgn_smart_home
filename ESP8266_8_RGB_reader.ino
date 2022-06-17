@@ -24,6 +24,7 @@ const char* lux_topic = "tgn/esp_8/lux";
 const char* con_topic = "tgn/esp_8/connection/ip";
 const char* reset_topic = "tgn/system/reboot/esp4";
 String clientID = "NodeMCU_8 V1.7";
+int z = 0;
 
 TCS34725 tcs;
 WiFiClient espClient;
@@ -95,66 +96,69 @@ void callback(char* topic, byte* payload, unsigned int length) {
 void loop(void)
 {
   if (!client.connected()) {
-        reconnect();
-    }
+    reconnect();
+  }
   client.loop();
-  
-    if (tcs.available())
-    {
-
-        static uint32_t prev_ms = millis();
-        TCS34725::Color color = tcs.color();
-        TCS34725::RawData raw = tcs.raw();
-        dtostrf(tcs.lux(),-1, 0, lu);
-        dtostrf(tcs.colorTemperature(),-1, 0, ctemp);
-        dtostrf((raw.r / 256),-1, 0, ccr);
-        dtostrf((raw.g / 256),-1, 0, ccg);
-        dtostrf((raw.b / 256),-1, 0, ccb);
-        strcpy (ccs,ccr);
-        strcat (ccs,".");
-        strcat (ccs,ccg);
-        strcat (ccs,".");
-        strcat (ccs,ccb);
-        strcat (ccs,".");
-        strcat (ccs,"255");
-        Serial.print("Color Temp : "); Serial.println(ctemp);
-        Serial.print("Lux        : "); Serial.println(lu);
-        Serial.print("Raw R      : "); Serial.println(ccr);
-        Serial.print("Raw G      : "); Serial.println(ccg);
-        Serial.print("Raw B      : "); Serial.println(ccb);
-        Serial.print("Colorcode  : "); Serial.println(ccs);
-        prev_ms = millis();
-    }
-    char ip_out[50] = "";
-    IPAddress ip_r = WiFi.localIP();
-    byte first_octet = ip_r[0];
-    byte second_octet = ip_r[1];
-    byte third_octet = ip_r[2];
-    byte fourth_octet = ip_r[3];
-    static char ip_a[7];
-    static char ip_b[7];
-    static char ip_c[7];
-    static char ip_d[7];
-    dtostrf(first_octet, 2, 0, ip_a);
-    dtostrf(second_octet, 2, 0, ip_b);
-    dtostrf(third_octet, 1, 0, ip_c);
-    dtostrf(fourth_octet, 2, 0, ip_d);
-    strcat(ip_out,ip_a);
-    strcat(ip_out,".");
-    strcat(ip_out,ip_b);
-    strcat(ip_out,".");
-    strcat(ip_out,ip_c);
-    strcat(ip_out,".");
-    strcat(ip_out,ip_d);
-    Serial.println(ip_out);
-    client.publish(con_topic, ip_out, true);
-    client.publish(color_topic, ccs, true);
-    client.publish(lux_topic, lu, true);
-    client.publish(ctemp_topic, ctemp, true);
-    if (set_room){
-      Serial.println("Set RGB in Room");
-      client.publish(br_topic, "150", true);
-      client.publish(color3_topic, ccs, true);
-    }
-    delay(5000);
+  if (tcs.available())
+  {
+    static uint32_t prev_ms = millis();
+    TCS34725::Color color = tcs.color();
+    TCS34725::RawData raw = tcs.raw();
+    dtostrf(tcs.lux(),-1, 0, lu);
+    dtostrf(tcs.colorTemperature(),-1, 0, ctemp);
+    dtostrf((raw.r / 256),-1, 0, ccr);
+    dtostrf((raw.g / 256),-1, 0, ccg);
+    dtostrf((raw.b / 256),-1, 0, ccb);
+    strcpy (ccs,ccr);
+    strcat (ccs,".");
+    strcat (ccs,ccg);
+    strcat (ccs,".");
+    strcat (ccs,ccb);
+    strcat (ccs,".");
+    strcat (ccs,"255");
+    Serial.print("Color Temp : "); Serial.println(ctemp);
+    Serial.print("Lux        : "); Serial.println(lu);
+    Serial.print("Raw R      : "); Serial.println(ccr);
+    Serial.print("Raw G      : "); Serial.println(ccg);
+    Serial.print("Raw B      : "); Serial.println(ccb);
+    Serial.print("Colorcode  : "); Serial.println(ccs);
+    prev_ms = millis();
+  }
+  char ip_out[50] = "";
+  IPAddress ip_r = WiFi.localIP();
+  byte first_octet = ip_r[0];
+  byte second_octet = ip_r[1];
+  byte third_octet = ip_r[2];
+  byte fourth_octet = ip_r[3];
+  static char ip_a[7];
+  static char ip_b[7];
+  static char ip_c[7];
+  static char ip_d[7];
+  dtostrf(first_octet, 2, 0, ip_a);
+  dtostrf(second_octet, 2, 0, ip_b);
+  dtostrf(third_octet, 1, 0, ip_c);
+  dtostrf(fourth_octet, 2, 0, ip_d);
+  strcat(ip_out,ip_a);
+  strcat(ip_out,".");
+  strcat(ip_out,ip_b);
+  strcat(ip_out,".");
+  strcat(ip_out,ip_c);
+  strcat(ip_out,".");
+  strcat(ip_out,ip_d);
+  Serial.println(ip_out);
+  client.publish(con_topic, ip_out, true);
+  client.publish(color_topic, ccs, true);
+  client.publish(lux_topic, lu, true);
+  client.publish(ctemp_topic, ctemp, true);
+  if (set_room){
+    Serial.println("Set RGB in Room");
+    client.publish(br_topic, "150", true);
+    client.publish(color3_topic, ccs, true);
+  }
+  delay(5000);
+  z = z + 1;
+  if (z == 720){
+    Serial.println("reboot");
+    ESP.restart();
+  }
 }

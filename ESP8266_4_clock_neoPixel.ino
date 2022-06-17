@@ -234,31 +234,31 @@ void callback(char* topic, byte* payload, unsigned int length) {
  
 void loop() {
   if (!client.connected()) {
-        reconnect();
-    }
+    reconnect();
+  }
   client.loop();
-    char ip_out[50] = "";
-    IPAddress ip_r = WiFi.localIP();
-    byte first_octet = ip_r[0];
-    byte second_octet = ip_r[1];
-    byte third_octet = ip_r[2];
-    byte fourth_octet = ip_r[3];
-    static char ip_a[7];
-    static char ip_b[7];
-    static char ip_c[7];
-    static char ip_d[7];
-    dtostrf(first_octet, 2, 0, ip_a);
-    dtostrf(second_octet, 2, 0, ip_b);
-    dtostrf(third_octet, 1, 0, ip_c);
-    dtostrf(fourth_octet, 2, 0, ip_d);
-    strcat(ip_out,ip_a);
-    strcat(ip_out,".");
-    strcat(ip_out,ip_b);
-    strcat(ip_out,".");
-    strcat(ip_out,ip_c);
-    strcat(ip_out,".");
-    strcat(ip_out,ip_d);
-    client.publish(con_topic, ip_out, true);
-    Serial.println(ip_out);
-    delay(5000);
+  char ip_out[50] = "";
+  IPAddress ip_r = WiFi.localIP();
+  byte first_octet = ip_r[0];
+  byte second_octet = ip_r[1];
+  byte third_octet = ip_r[2];
+  byte fourth_octet = ip_r[3];
+  static char ip_a[7];
+  static char ip_b[7];
+  static char ip_c[7];
+  static char ip_d[7];
+  dtostrf(first_octet, 2, 0, ip_a);
+  dtostrf(second_octet, 2, 0, ip_b);
+  dtostrf(third_octet, 1, 0, ip_c);
+  dtostrf(fourth_octet, 2, 0, ip_d);
+  strcat(ip_out,ip_a);
+  strcat(ip_out,".");
+  strcat(ip_out,ip_b);
+  strcat(ip_out,".");
+  strcat(ip_out,ip_c);
+  strcat(ip_out,".");
+  strcat(ip_out,ip_d);
+  client.publish(con_topic, ip_out, true);
+  Serial.println(ip_out);
+  delay(5000);
 }
