@@ -1,10 +1,14 @@
 # ESP8266_tgn_smart_home
+
+|Build Status|
+
   * ESP8266: Read DHT22,light sensor(analog), publish data to MQTT-Brocker and sends data to Thingspeak
 (optional OELD-Display)
  * ESP8266_2 Read light sensor and PIR sensor, publish data to MQTT-Brocker
  * ESP8266_3 with NeoPixel LED (ws2812b)
 
 needed Libs:
+
 + Adafruit_Sensor-master https://github.com/adafruit/Adafruit_Sensor
 + DHT-sensor-library-master-1 https://github.com/adafruit/DHT-sensor-library
 + thingspeak-arduino-master https://github.com/mathworks/thingspeak-arduino
@@ -18,3 +22,7 @@ needed Libs:
 + ArduinoJson https://github.com/bblanchon/ArduinoJson
 + python-2.7.14 for wlan sketch update https://www.python.org/downloads/release/python-2714/
 
+.. ..
+
+.. |Build Status| image:: https://caworks-sl.de/images/build.png
+   :target: https://caworks-sl.de
